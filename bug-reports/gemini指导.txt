@@ -1,0 +1,153 @@
+SYSTEM OVERRIDE: FULL WORKSPACE UI RESTORATION & API WIRING
+
+Trae, during the last logic patch, the premium UI of the workspace was lost. We must execute a FULL OVERWRITE of `src/pages/workspace.tsx` to restore the "Premium Modern Pro / Dark TE" aesthetic and wire it directly to our new `/api/generate` endpoint.
+
+Execute this precise protocol:
+
+1. [FULL OVERWRITE OF WORKSPACE.TSX]
+Replace the entire contents of `src/pages/workspace.tsx` with the following production-grade React code. 
+
+```tsx
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useScriptStore } from '@/store/scriptStore';
+
+const MODELS = ['DeepSeek', '豆包 (Doubao)', 'Gemini', 'GPT-4o'];
+
+export default function Workspace() {
+  const router = useRouter();
+  const { 
+    projectName, 
+    projectPath, 
+    scriptContent, 
+    setScriptContent,
+    selectedModel,
+    setSelectedModel,
+    userPrompt,
+    setUserPrompt,
+    isGenerating,
+    setIsGenerating
+  } = useScriptStore();
+
+  // Defensive Routing
+  useEffect(() => {
+    if (!projectName && typeof window !== 'undefined') {
+      console.warn("No project context found.");
+    }
+  }, [projectName]);
+
+  const handleGenerate = async () => {
+    if (!userPrompt.trim() || isGenerating) return;
+    
+    setIsGenerating(true);
+    const originalContent = scriptContent;
+    setScriptContent('正在连接 AI 神经中枢，生成架构中...\nConnecting to LLM Gateway...');
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: `生成中文剧本+${userPrompt}`, 
+          model: selectedModel 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'API Request Failed');
+      }
+
+      // If there was imported text, append the new AI generation below it, otherwise just show AI output.
+      const finalOutput = originalContent && !originalContent.includes('正在连接') 
+        ? `${originalContent}\n\n---\n\n[AI 生成片段 - ${selectedModel}]:\n${data.content}`
+        : data.content;
+
+      setScriptContent(finalOutput);
+    } catch (error: any) {
+      console.error("[Workspace Error]:", error);
+      setScriptContent(`[系统错误]: ${error.message}\n请检查 .env.local 中的 API Key 配置或网络连接。`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#1A1A1A] text-gray-200 p-8 font-sans selection:bg-[#FF5000] selection:text-white">
+      {/* Header & Debug */}
+      <header className="mb-6 flex justify-between items-end border-b border-gray-800 pb-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#FF5000] tracking-tight">AI Storyboard Director</h1>
+          <p className="text-gray-400 mt-1 text-sm uppercase tracking-widest">Stage 1: Script Breakdown Workspace</p>
+        </div>
+        <div className="text-right font-mono text-xs text-gray-500">
+          <p>PROJ_ID: <span className="text-green-400/70">{projectName || 'NULL'}</span></p>
+          <p>I/O_PATH: <span className="text-green-400/70 truncate max-w-xs inline-block align-bottom">{projectPath || 'NULL'}</span></p>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-160px)]">
+        
+        {/* Left Column: Controls */}
+        <div className="flex flex-col gap-4 h-full">
+          {/* Model Matrix */}
+          <div className="bg-[#222222] border border-gray-800 p-4 rounded-xl">
+            <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Neural Routing (模型选择)</h2>
+            <div className="flex flex-wrap gap-2">
+              {MODELS.map((model) => (
+                <button
+                  key={model}
+                  onClick={() => setSelectedModel(model)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    selectedModel === model 
+                      ? 'bg-[#FF5000] text-white shadow-[0_0_15px_rgba(255,80,0,0.4)]' 
+                      : 'bg-[#111] text-gray-400 hover:bg-[#333] hover:text-gray-200 border border-gray-800'
+                  }`}
+                >
+                  {model}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Prompt Input */}
+          <div className="bg-[#222222] border border-gray-800 p-4 rounded-xl flex-grow flex flex-col">
+            <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Creative Payload (输入创意)</h2>
+            <textarea
+              value={userPrompt}
+              onChange={(e) => setUserPrompt(e.target.value)}
+              placeholder="输入你的故事创意、世界观或核心冲突...&#10;(例如：一个在赛博朋克深渊中寻找真实记忆的仿生人)"
+              className="flex-grow bg-[#111] border border-gray-800 rounded-md p-4 text-sm text-gray-200 focus:outline-none focus:border-[#FF5000] transition-colors resize-none mb-4"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating || !userPrompt.trim()}
+              className={`w-full py-4 rounded-md font-bold uppercase tracking-wider transition-all duration-300 ${
+                isGenerating || !userPrompt.trim()
+                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#FF5000] hover:bg-[#FF6600] text-white shadow-[0_4px_20px_rgba(255,80,0,0.3)] hover:shadow-[0_4px_25px_rgba(255,80,0,0.5)] cursor-pointer'
+              }`}
+            >
+              {isGenerating ? 'System Generating...' : 'AI 生成剧本'}
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Output / Script View */}
+        <div className="bg-[#222222] border border-gray-800 p-4 rounded-xl h-full flex flex-col">
+          <h2 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Script Engram (剧本预览)</h2>
+          <textarea
+            value={scriptContent}
+            onChange={(e) => setScriptContent(e.target.value)}
+            placeholder="导入的剧本或 AI 生成的内容将在此呈现..."
+            className="flex-grow bg-[#111] border border-gray-800 rounded-md p-4 text-sm text-gray-300 focus:outline-none focus:border-gray-600 transition-colors resize-none font-mono leading-relaxed"
+          />
+        </div>
+
+      </div>
+    </div>
+  );
+}
+[VERIFY TAILWIND]
+Ensure no classes conflict and the page compiles cleanly in Next.js.

@@ -1,0 +1,40 @@
+# Bug报告：Next.js静态导出配置与开发模式冲突
+## 错误信息
+```
+net::ERR_ABORTED http://localhost:3000/
+missing required error components, refreshing...
+```
+
+## 根本原因分析
+**配置冲突**：`next.config.js`中设置了`output: 'export'`和`distDir: 'dist'`，这个配置是用于生产环境静态导出的，不兼容开发服务器模式。
+
+### 详细错误堆栈
+```
+Error: Cannot find module 'D:\Amour\trae project\ai director\dist\server\middleware-manifest.json'
+Require stack:
+- node_modules\next\dist\server\next-server.js
+- node_modules\next\dist\server\dev\next-dev-server.js
+- node_modules\next\dist\server\next.js
+- node_modules\next\dist\server\lib\start-server.js
+```
+
+### 冲突点说明
+1. **`output: 'export'`**：配置Next.js导出纯静态HTML文件，禁用了Next.js的服务器端功能
+2. **`distDir: 'dist'`**：指定构建产物输出到dist目录
+3. **开发模式要求**：Next.js开发服务器依赖`.next`目录作为构建缓存，不支持output: export配置
+
+### 影响范围
+- ❌ 开发服务器无法正常响应请求
+- ❌ 所有页面请求返回net::ERR_ABORTED错误
+- ❌ 页面无限刷新并显示"missing required error components"
+
+### 不修改代码的临时解决方案
+1. 直接在浏览器中访问项目静态文件（不使用Next.js开发服务器）
+2. 执行`npm run build`构建静态文件到dist目录，然后用静态服务器访问
+3. 部署到支持静态网站托管的服务上
+
+### 根因确认
+- 项目架构：Pages Router
+- Next.js版本：14.1.0
+- 配置文件：`next.config.js`第4-5行的静态导出配置与开发模式不兼容
+- 无代码语法错误，所有.tsx文件格式正确

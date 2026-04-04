@@ -1,0 +1,54 @@
+# Bug报告：Framer Motion模块加载运行时错误
+## 错误信息
+```
+Unhandled Runtime Error 
+TypeError: Cannot read properties of undefined (reading 'call') 
+```
+
+## 调用栈分析
+```
+1. options.factory 
+   .next/static/chunks/webpack.js (716:31) 
+2. __webpack_require__ 
+   .next/static/chunks/webpack.js (37:33) 
+3. fn 
+   .next/static/chunks/webpack.js (371:21) 
+4. eval 
+   webpack-internal:/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs (5:63) 
+5. ./node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs 
+   .next/static/chunks/pages/index.js (445:1) 
+6. 最终触发自：src/pages/index.tsx 导入AnimatePresence时
+```
+
+## 根本原因分析
+### 问题定位
+这是**webpack模块加载器与ES模块的兼容性冲突**，具体发生在framer-motion库的ES模块导入阶段。
+
+### 触发条件
+1. 从`framer-motion`导入`AnimatePresence`组件时触发
+2. 模块位于`framer-motion/dist/es/components/AnimatePresence/index.mjs`（ES模块格式）
+3. webpack在执行模块factory函数时调用了undefined对象的call方法
+
+### 可能的诱因
+1. **webpack配置冲突**：`next.config.js`中的`config.resolve.fallback = { fs: false, path: false }`配置可能影响了ES模块的加载行为
+2. **ES模块兼容性问题**：framer-motion的ES模块格式（.mjs）与Next.js 14.1.0的Pages Router webpack加载器存在兼容性问题
+3. **模块缓存损坏**：虽然之前清除了.next目录，但可能存在ES模块缓存的遗留问题
+4. **framer-motion版本兼容性**：framer-motion@^10.18.0与Next.js 14.1.0的webpack 5配置存在已知兼容性问题
+
+## 影响范围
+- ❌ 页面完全无法加载
+- ❌ 所有依赖framer-motion的动效组件无法使用
+- ❌ 阻断所有页面功能
+
+## 临时解决方案（不修改代码）
+1. 清除浏览器缓存和本地存储后刷新页面
+2. 执行完整的依赖重装：删除node_modules和package-lock.json后重新安装
+3. 降级framer-motion到v9.x稳定版本
+4. 移除webpack配置中的resolve.fallback设置
+5. 使用CommonJS格式导入framer-motion组件
+
+## 验证信息
+- ✅ 代码无语法错误，Hook调用顺序正确
+- ✅ 所有导入路径正确，文件存在
+- ✅ 开发服务器编译阶段无错误，仅运行时触发
+- ✅ 错误与代码逻辑无关，属于构建工具与第三方库的兼容性问题

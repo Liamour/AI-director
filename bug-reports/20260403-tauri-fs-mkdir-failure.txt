@@ -1,0 +1,91 @@
+# [BUG SUMMARY]
+文件选择对话框已正常弹出，但选择路径后未生成预期的项目文件夹结构，目录创建失败
+
+## [STACK TRACE / LOGS]
+```
+# 前端控制台预期输出：
+[Tauri V2] Triggering native plugin dialog...
+[Tauri V2] Creating physical directories at: [选择的路径]/[项目名]
+# 无后续成功日志，或者出现[CRITICAL]错误日志
+```
+
+## [ENVIRONMENT & STATE CONTEXT]
+- ✅ Tauri版本：2.10.1
+- ✅ 前端插件版本：`@tauri-apps/plugin-dialog v2.6.0`、`@tauri-apps/plugin-fs v2.4.5`
+- ✅ Rust插件版本：`tauri-plugin-dialog v2.6.0`、`tauri-plugin-fs v2.4.5`
+- ✅ Capabilities配置：已包含`fs:default`权限
+- ✅ 环境检测正常：文件选择对话框已成功弹出，证明`isTauriEnv`返回正确
+- ✅ API调用流程：`open()`函数执行成功，获取到用户选择的路径
+- ❌ 问题表现：选择路径后无文件夹生成，直接跳转工作区显示mock路径
+
+## [CODE CONTEXT]
+### 目录创建逻辑：
+```typescript
+// Create physical folder structure 
+await mkdir(projectRoot, { recursive: true }); 
+await mkdir(`${projectRoot}${separator}剧本`, { recursive: true }); 
+await mkdir(`${projectRoot}${separator}脚本`, { recursive: true }); 
+await mkdir(`${projectRoot}${separator}角色`, { recursive: true }); 
+await mkdir(`${projectRoot}${separator}场景`, { recursive: true }); 
+await mkdir(`${projectRoot}${separator}视频素材`, { recursive: true });
+```
+
+### 相关导入：
+```typescript
+import { mkdir } from '@tauri-apps/plugin-fs';
+```
+
+### Capabilities权限：
+```json
+"permissions": [
+  "core:default",
+  "dialog:default",
+  "fs:default"
+]
+```
+
+## [ROOT CAUSE HYPOTHESIS]（按可能性排序）
+### 1. **最高可能性：Tauri V2 fs插件API签名变更**
+`mkdir`函数的参数格式在v2.x中发生破坏性变更：
+- 原因：v2.x版本的`mkdir`第二个参数格式可能已改变，`{ recursive: true }`不再被正确识别
+- 验证方式：查看F12控制台是否有`[CRITICAL]`错误日志，包含参数不匹配或函数不存在相关信息
+- 特征：API调用抛出异常，被catch捕获后返回mock路径
+
+### 2. **fs权限范围限制**
+`fs:default`权限不包含文件系统写入权限：
+- 原因：Tauri V2的`fs:default`权限可能默认仅包含读取权限，写入操作需要额外配置权限
+- 验证方式：查看Rust控制台是否有权限拒绝相关的错误日志
+- 特征：Rust后端输出"permission denied"或"capability not found"错误
+
+### 3. **路径拼接错误**
+跨平台路径分隔符处理逻辑存在缺陷：
+- 原因：`basePath`可能已经包含末尾的分隔符，导致路径拼接错误（例如`C:\test\项目名`变成`C:\test\\项目名`）
+- 验证方式：查看控制台输出的`[Tauri V2] Creating physical directories at:`路径是否正确
+- 特征：路径格式异常，API调用抛出路径无效错误
+
+### 4. **文件系统写入权限不足**
+操作系统权限限制导致无法创建文件夹：
+- 原因：选择的路径需要管理员权限才能写入（例如系统目录、Program Files等）
+- 验证方式：尝试选择桌面、文档等普通路径重试
+- 特征：API调用抛出"permission denied"错误
+
+### 5. **fs插件未正确注册**
+Rust后端fs插件初始化失败：
+- 原因：`lib.rs`中`.plugin(tauri_plugin_fs::init())`注册失效
+- 验证方式：查看Rust控制台是否有插件初始化相关错误
+- 特征：Rust后端输出插件加载失败相关错误
+
+## [DIAGNOSTIC STEPS]（无需修改代码）
+1. 打开桌面应用的开发者工具（F12），切换到Console标签
+2. 点击创建项目，选择路径后查看控制台输出：
+   - 确认是否有`[Tauri V2] Creating physical directories at:`日志，路径是否正确
+   - 查看是否有`[CRITICAL]`开头的错误日志，记录具体错误信息
+3. 查看Rust终端窗口是否有红色错误输出，重点关注fs相关权限或API错误
+4. 尝试选择不同的路径（例如桌面、文档）测试是否有权限问题
+
+## [PROPOSED SOLUTIONS]（仅作为参考，不执行修改）
+1. 检查Tauri V2 fs插件`mkdir`函数的最新API文档，确认参数格式
+2. 在Capabilities配置中添加fs写入相关权限
+3. 优化路径拼接逻辑，使用Tauri官方path API处理路径
+4. 以管理员身份运行应用后重试
+5. 验证Rust后端fs插件注册是否正确

@@ -1,0 +1,34 @@
+# 系统诊断报告：Tauri Plugin包名不存在错误
+
+## [A] 精确错误跟踪 / 问题位置
+1. **错误类型**：NPM包安装失败 (E404 Not Found)
+2. **错误信息**：`GET https://registry.npmjs.org/@tauri-apps%2fplugin-path - Not found`
+3. **触发位置**：安装`@tauri-apps/plugin-path`包时失败
+4. **影响范围**：所有三个Tauri插件包无法安装，导致编译错误仍然存在
+5. **已完成步骤**：导入路径已全部更新为Tauri v2插件格式（`@tauri-apps/plugin-*`）
+
+## [B] 上下文边界
+- 已将代码中的导入路径全部从v1格式`@tauri-apps/api/*`更新为v2格式`@tauri-apps/plugin-*`
+- 运行时环境判断逻辑`if (!isTauri)`保持完全不变
+- Tauri v2插件目前处于Beta阶段，包名可能带有版本后缀，或者部分插件尚未发布到正式NPM仓库
+- 经检测：`@tauri-apps/plugin-fs`和`@tauri-apps/plugin-dialog`存在，但`@tauri-apps/plugin-path`包名不正确或不存在
+
+## [C] 状态/类型不匹配
+1. **插件包名差异**：Tauri v2路径处理插件的实际包名可能不是`@tauri-apps/plugin-path`
+2. **Beta版本要求**：Tauri v2插件可能需要指定beta版本号安装，例如`@tauri-apps/plugin-path@beta`
+3. **路径API变更**：路径相关API可能已整合到其他包中，或者包名已变更
+
+## [D] 简要技术假设
+### 临时解决方案（兼容Web环境编译）：
+由于我们的代码在Web环境下永远不会执行这些Tauri API导入，可以在动态导入语句中添加`webpackIgnore: true`注释，让Webpack完全忽略这些模块的解析：
+```typescript
+const { sep } = await import(/* webpackIgnore: true */ '@tauri-apps/plugin-path');
+const { createDir, exists } = await import(/* webpackIgnore: true */ '@tauri-apps/plugin-fs');
+const { open } = await import(/* webpackIgnore: true */ '@tauri-apps/plugin-dialog');
+```
+该方案无需修改业务逻辑，也无需安装任何Tauri插件包，即可让Webpack编译成功，Web环境下功能完全正常。在Tauri桌面环境下，插件API会正常工作。
+
+### 完整解决方案：
+1. 查找正确的Tauri v2路径插件包名，确认是否需要beta版本后缀
+2. 使用正确的包名安装所有三个插件
+3. 安装完成后重启开发服务器即可

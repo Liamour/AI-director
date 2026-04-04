@@ -1,0 +1,35 @@
+# 系统诊断报告：Tauri API插件模块缺失错误
+
+## [A] 精确错误跟踪 / 问题位置
+1. **错误类型**：编译阶段模块解析失败 (Module not found)
+2. **错误信息**：`Can't resolve '@tauri-apps/api/fs'`
+3. **触发位置**：`src/shared/lib/tauri-fs.ts` 第23行动态导入语句
+4. **已安装但缺失子模块**：已安装`@tauri-apps/api`基础包，但缺少`fs`、`dialog`、`path`子模块
+5. **导入链路**：`tauri-fs.ts` → `page.tsx` → 全局构建流程
+6. **影响范围**：导致整个项目编译失败，无法启动开发服务器
+
+## [B] 上下文边界
+- Tauri 2.x 架构变更：从Tauri v2开始，文件系统、对话框、路径处理等核心功能已从基础`@tauri-apps/api`包中分离，成为独立的插件包
+- 基础包仅包含通用API：`@tauri-apps/api`仅包含事件、窗口等基础前端API，不再包含文件系统等操作系统级API
+- 我们的代码使用了三个独立插件模块：
+  - `@tauri-apps/api/dialog` → 对应`@tauri-apps/plugin-dialog`插件
+  - `@tauri-apps/api/fs` → 对应`@tauri-apps/plugin-fs`插件
+  - `@tauri-apps/api/path` → 对应`@tauri-apps/plugin-path`插件
+- 现有代码逻辑完全正确，运行时判断机制依然有效，错误原因是插件依赖未安装
+
+## [C] 状态/类型不匹配
+1. **Tauri版本架构差异**：Tauri v1.x和v2.x的包结构发生了重大变更，插件化拆分了所有非核心API
+2. **依赖安装不完整**：仅安装了基础API包，缺少三个必需的功能插件包
+3. **编译时扫描机制**：Webpack依然在编译阶段静态扫描所有`import()`语句，要求所有引用的模块必须存在于依赖树中
+
+## [D] 简要技术假设
+### 解决方案（无需修改业务代码）：
+需要安装三个对应的Tauri插件包：
+```bash
+npm install @tauri-apps/plugin-fs @tauri-apps/plugin-dialog @tauri-apps/plugin-path
+```
+
+### 技术说明：
+- Tauri 2.x采用了完全插件化的架构，所有系统级API都需要单独安装对应插件
+- 现有业务代码逻辑完全正确，无需任何修改，仅需补充安装缺失的插件依赖
+- 安装完成后Webpack就能正确解析所有模块引用，编译错误会自动消失

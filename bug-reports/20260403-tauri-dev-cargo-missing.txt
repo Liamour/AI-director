@@ -1,0 +1,69 @@
+# [BUG SUMMARY]
+Tauri开发模式启动失败，Rust编译环境缺失，无法构建桌面应用后端
+
+## [STACK TRACE / LOGS]
+```
+# 错误1：Cargo命令未找到
+failed to run 'cargo metadata' command to get workspace directory: failed to run command cargo metadata --no-deps --format-version 1: program not found
+Error: failed to run 'cargo metadata' command to get workspace directory: failed to run command cargo metadata --no-deps --format-version 1: program not found
+
+# 错误2（历史错误）：Tauri配置文件检测失败
+thread '<unnamed>' panicked at crates\tauri-cli\src\helpers\app_paths.rs:133:5:
+Couldn't recognize the current folder as a Tauri project. It must contain a 'tauri.conf.json', 'tauri.conf.json5' or 'Tauri.toml' file in any subfolder.
+```
+
+## [ENVIRONMENT & STATE CONTEXT]
+- 操作系统：Windows 10/11
+- 项目状态：
+  - ✅ Tauri初始化已完成，`src-tauri`目录存在
+  - ✅ `tauri.conf.json`配置文件已生成，build配置正确
+  - ✅ `Cargo.toml`和`src/main.rs`已创建
+  - ❌ Rust工具链未安装，系统PATH中无`cargo`命令
+- Tauri版本：2.10.1
+- Node.js版本：25.8.2
+
+## [CODE CONTEXT]
+✅ `src-tauri/tauri.conf.json` build配置（正确）：
+```json
+"build": {
+  "frontendDist": "../dist",
+  "devUrl": "http://localhost:3000",
+  "beforeDevCommand": "npm run dev",
+  "beforeBuildCommand": "npm run build"
+}
+```
+
+✅ 项目结构（正确）：
+```
+src-tauri/
+├── tauri.conf.json
+├── Cargo.toml
+├── src/
+│   ├── main.rs
+│   └── lib.rs
+└── build.rs
+```
+
+## [ROOT CAUSE HYPOTHESIS]
+### 根本原因：
+1. **Rust编译环境缺失**：系统未安装Rust工具链，`cargo`命令不存在，导致Tauri无法编译Rust后端代码
+2. **错误2已解决**：之前的配置文件检测失败问题已通过`tauri init`创建`src-tauri`目录解决，当前不存在此问题
+
+### 影响范围：
+- ❌ Tauri桌面应用无法启动和编译
+- ✅ Next.js前端开发模式不受影响，可正常在浏览器中运行
+
+## [PROPOSED SOLUTIONS]
+### 立即解决方案：
+1. **安装Rust工具链**：
+   - 访问 https://www.rust-lang.org/tools/install 下载并安装Rustup
+   - 安装完成后重启终端，验证`cargo --version`命令可用
+2. **重新启动Tauri开发模式**：
+   ```bash
+   npm run tauri dev
+   ```
+   命令将自动编译Rust后端，启动Next.js前端，打开桌面应用窗口
+
+### 验证步骤：
+- 安装Rust后执行`rustc --version`和`cargo --version`确认安装成功
+- 首次运行`tauri dev`会下载Rust依赖，首次编译可能需要5-10分钟

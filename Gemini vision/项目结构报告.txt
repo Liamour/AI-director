@@ -1,0 +1,72 @@
+# AI 世纪导演 项目结构报告
+## 项目基本信息
+- 项目名称：AI故事板导演工具
+- 技术栈：Next.js 14 + React 18 + TypeScript + TailwindCSS + Tauri 2 + Zustand
+- 主要功能：AI驱动的剧本创作、分镜生成、项目管理工具
+- 运行模式：支持Web浏览器预览和Tauri桌面应用两种模式
+
+## 目录结构
+```
+ai director/
+├── src/
+│   ├── pages/                    # Pages Router 页面目录
+│   │   ├── index.tsx            # 主页面/项目入口
+│   │   ├── _app.tsx             # 全局App配置
+│   │   └── _document.tsx        # HTML文档配置
+│   ├── features/                # 功能模块目录
+│   │   ├── director-board/      # 导演控制台模块
+│   │   │   └── ui/
+│   │   │       ├── DirectorLayout.tsx  # 导演控制台布局
+│   │   │       └── ShotCard.tsx        # 分镜卡片组件
+│   │   ├── idea-generator/      # 灵感生成模块
+│   │   └── script-importer/     # 剧本导入模块
+│   ├── core/                    # 核心模块
+│   │   ├── types/               # TypeScript 类型定义
+│   │   │   └── index.ts
+│   │   └── README.md
+│   ├── shared/                  # 共享模块
+│   │   ├── lib/                 # 工具库
+│   │   │   └── tauri-fs.ts      # Tauri文件系统封装
+│   │   └── ui/                  # 共享UI组件
+│   ├── store/                   # 状态管理
+│   │   └── scriptStore.ts       # 全局状态管理（Zustand）
+│   └── styles/                  # 样式文件
+│       └── globals.css          # 全局样式
+├── bug-reports/                 # Bug报告目录
+├── Gemini vision/               # Gemini协作目录（当前目录）
+├── .gitignore
+├── next.config.js               # Next.js配置
+├── package.json                 # 项目依赖配置
+├── tailwind.config.ts           # TailwindCSS配置
+└── tsconfig.json                # TypeScript配置
+```
+
+## 核心功能模块说明
+1. **灵感奇点模块**：用户输入创意灵感，选择风格标签
+2. **剧本导入模块**：支持导入本地剧本文件（.txt/.md/.json）
+3. **项目创建模块**：创建本地项目目录结构（仅Tauri桌面端可用）
+4. **AI生成模块**：基于用户输入生成完整剧本和分镜
+5. **导演控制台**：可视化展示生成的分镜、脚本、人物设定
+
+## 技术架构说明
+- 状态管理：使用Zustand进行全局状态管理，定义在`src/store/scriptStore.ts`
+- UI框架：使用TailwindCSS + Framer Motion实现动效和样式
+- 桌面端能力：通过Tauri API实现本地文件系统访问、目录操作
+- 路由架构：使用Next.js Pages Router（已从App Router迁移，避免水合错误）
+
+## 关键文件说明
+1. **src/pages/index.tsx**：主页面，包含灵感输入、风格选择、项目创建模态框
+2. **src/store/scriptStore.ts**：全局状态，管理项目数据、生成状态、用户选择
+3. **src/shared/lib/tauri-fs.ts**：Tauri API封装，包含环境检测，在浏览器环境自动降级
+4. **src/features/director-board/ui/DirectorLayout.tsx**：导演控制台主界面
+5. **next.config.js**：配置了静态导出和Tauri相关依赖忽略
+
+## 运行说明
+- 开发模式：`npm run dev` 启动在 http://localhost:3000
+- 构建模式：`npm run build` 导出静态文件到`dist`目录，用于Tauri打包
+- 桌面端：通过Tauri打包后可以访问本地文件系统，实现项目创建和文件导入功能
+
+## 当前运行状态
+- 开发服务器已启动在 http://localhost:3001
+- 所有核心功能可以在浏览器中正常预览
+- Tauri相关功能在浏览器中显示提示信息，打包为桌面应用后自动启用

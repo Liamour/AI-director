@@ -1,0 +1,119 @@
+# [BUG SUMMARY]
+Tauri文件选择对话框未弹出，依旧触发Web mock逻辑，官方`isTauri`检测API未生效
+
+## [STACK TRACE / LOGS]
+```
+# 前端控制台预期输出（无错误，直接进入mock分支）
+Web preview mode: Project scaffolding simulated
+[CRITICAL] Tauri Native API Failed. Reason: [具体错误信息需要F12查看]
+
+# Rust后端日志无错误
+ Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.22s
+ Running `target\debug\app.exe`
+ ✓ Ready in 5.6s
+```
+
+## [ENVIRONMENT & STATE CONTEXT]
+- ✅ Tauri版本：2.10.1（最新稳定版）
+- ✅ 前端插件：已安装`@tauri-apps/api`、`@tauri-apps/plugin-dialog`、`@tauri-apps/plugin-fs`
+- ✅ Rust插件：已安装`tauri-plugin-dialog`、`tauri-plugin-fs`
+- ✅ 插件注册：`lib.rs`中已正确添加`.plugin(tauri_plugin_fs::init())`和`.plugin(tauri_plugin_dialog::init())`
+- ✅ Capabilities配置：`default.json`已包含`dialog:default`、`fs:default`、`core:default`权限
+- ✅ 环境检测：已替换为官方`import { isTauri } from '@tauri-apps/api/core'`
+- ✅ 应用窗口正常启动，前端代码编译无错误
+- ❌ 实际表现：点击创建项目无弹窗，直接返回`/mock/...`路径
+
+## [CODE CONTEXT]
+### 核心调用逻辑（`tauri-fs.ts`）：
+```typescript
+import { isTauri } from '@tauri-apps/api/core';
+
+export const scaffoldProject = async (projectName: string): Promise<string> => {
+  try {
+    if (!isTauri) {
+      console.log('Web preview mode: Project scaffolding simulated');
+      return `/mock/local/projects/${projectName.trim()}`;
+    }
+    // 动态导入API
+    const { open } = await import(/* webpackIgnore: true */ '@tauri-apps/api/dialog');
+    // 调用弹窗
+    const selectedPath = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select Project Root Directory'
+    });
+    // ...后续逻辑
+  } catch (error) {
+    console.error("[CRITICAL] Tauri Native API Failed. Reason:", error);
+    // ...降级逻辑
+  }
+};
+```
+
+### Capabilities配置（`default.json`）：
+```json
+{
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "fs:default"
+  ]
+}
+```
+
+## [ROOT CAUSE HYPOTHESIS]（按可能性排序）
+
+### 1. **最高可能性：`isTauri`在桌面环境中仍然返回`false`**
+Tauri 2.x的`isTauri` API在某些场景下可能返回错误值：
+- 原因：桌面应用启动时API初始化存在时序问题，`isTauri`在代码执行时还未被正确设置
+- 验证方式：在代码中添加`console.log('isTauri:', isTauri)`，查看F12控制台输出
+- 特征：会输出"Web preview mode"日志，无`[CRITICAL]`错误日志
+
+### 2. **动态导入`@tauri-apps/api/dialog`失败**
+动态导入的webpackIgnore可能导致模块加载失败：
+- 原因：`/* webpackIgnore: true */`强制webpack不处理该导入，在Tauri环境中可能无法正确解析模块路径
+- 验证方式：查看F12控制台是否有模块加载相关的`[CRITICAL]`错误
+- 特征：会输出`[CRITICAL]`错误日志，包含模块导入失败相关信息
+
+### 3. **Dialog API签名变更**
+Tauri 2.x dialog插件的API与使用方式不匹配：
+- 原因：`open`函数的参数格式或返回值类型在v2.x中发生了破坏性变更
+- 验证方式：查看F12控制台是否有参数不匹配的`[CRITICAL]`错误
+- 特征：API调用抛出异常，被catch捕获，输出错误日志
+
+### 4. **文件选择框被系统拦截**
+操作系统或安全软件阻止了文件对话框弹出：
+- 原因：Windows系统的窗口聚焦机制导致对话框在后台弹出，未显示在最上层
+- 验证方式：查看任务栏是否有新的窗口闪烁，或按Alt+Tab切换窗口
+- 特征：应用无响应，控制台无任何错误日志
+
+### 5. **Capabilities权限配置不匹配**
+权限配置的window标识符与实际窗口不匹配：
+- 原因：`capabilities/default.json`中`windows: ["main"]`配置与实际窗口的标识符不匹配
+- 验证方式：查看Rust控制台是否有权限拒绝相关的错误日志
+- 特征：Rust后端输出权限拒绝日志，前端控制台无明显错误
+
+### 6. **Tauri安全沙箱限制**
+Tauri 2默认安全策略禁止弹出对话框：
+- 原因：需要在`tauri.conf.json`中显式启用对话框权限
+- 验证方式：检查`tauri.conf.json`中是否有相关的安全配置限制
+- 特征：Rust控制台输出安全策略拦截日志
+
+## [DIAGNOSTIC STEPS]（无需修改代码，按顺序执行）
+1. 打开桌面应用的开发者工具（按F12），切换到Console标签
+2. 点击"生成剧本"或"导入剧本"按钮，触发API调用
+3. 查看控制台输出，重点关注：
+   - 是否有`isTauri: true/false`日志（如果已添加调试）
+   - 是否有`[CRITICAL]`开头的错误日志，记录具体错误信息
+   - 是否有模块加载、API调用相关的异常
+4. 查看Rust终端（运行`npm run tauri dev`的窗口）是否有红色错误输出
+5. 按Alt+Tab检查是否有隐藏的文件选择对话框
+
+## [PROPOSED SOLUTIONS]（仅作为诊断参考，不执行修改）
+1. 替换动态导入为静态导入：`import { open } from '@tauri-apps/plugin-dialog'`
+2. 添加调试日志确认`isTauri`实际返回值
+3. 升级dialog和fs插件到最新版本
+4. 在`tauri.conf.json`中显式配置窗口标识符为`"main"`
+5. 关闭系统安全软件后重试

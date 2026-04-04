@@ -1,0 +1,73 @@
+# [BUG SUMMARY]
+Tauri环境检测逻辑错误，导致原生API调用始终降级到mock模式，文件选择对话框无法弹出
+
+## [STACK TRACE / LOGS]
+```
+# 前端控制台输出（无错误抛出，直接进入mock分支）
+Web preview mode: Project scaffolding simulated
+[CRITICAL] Tauri Native API Failed. Reason: [Error: window is not defined]
+```
+
+## [ENVIRONMENT & STATE CONTEXT]
+- Tauri版本：2.10.1
+- 前端插件版本：`@tauri-apps/plugin-dialog v2.6.0`、`@tauri-apps/plugin-fs v2.4.5`
+- Rust插件版本：`tauri-plugin-dialog v2.6.0`、`tauri-plugin-fs v2.4.5`
+- Capabilities配置：已正确包含`dialog:default`和`fs:default`权限
+- 应用状态：桌面窗口正常启动，权限配置正确
+- 问题表现：点击创建项目后无文件选择弹窗，直接返回mock路径
+
+## [CODE CONTEXT]
+### 错误代码（`src/shared/lib/tauri-fs.ts`第7行）：
+```typescript
+// 检测是否在Tauri环境中运行
+const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+```
+
+### 调用逻辑：
+```typescript
+try {
+  if (!isTauri) {
+    // Web环境下模拟成功返回
+    console.log('Web preview mode: Project scaffolding simulated');
+    return `/mock/local/projects/${projectName.trim()}`;
+  }
+  // Tauri API调用逻辑...
+}
+```
+
+## [ROOT CAUSE HYPOTHESIS]
+### 根本原因：Tauri 2 API变更导致环境检测失效
+Tauri 2.x版本**默认不再暴露`__TAURI__`全局变量**到window对象，这是Tauri 1.x的旧API行为。当前的环境检测逻辑在Tauri 2桌面应用中始终返回`false`，导致代码直接进入Web模拟分支，永远不会执行原生API调用。
+
+### 验证依据：
+1. Tauri 2安全模型默认禁止暴露全局变量，需要显式配置才能启用
+2. 控制台输出"Web preview mode"日志，证明代码进入了非Tauri分支
+3. 权限配置、插件注册、Rust编译全部正确，问题完全出在前端环境检测逻辑
+4. 代码未抛出异常，直接返回mock路径，符合检测失效的行为特征
+
+## [PROPOSED SOLUTIONS]
+### 修复方案1（推荐）：使用官方Tauri环境检测API
+```typescript
+import { isTauri } from '@tauri-apps/api/core';
+```
+直接导入Tauri官方提供的环境检测变量，无需自行实现。
+
+### 修复方案2：兼容旧检测逻辑
+```typescript
+const isTauri = typeof window !== 'undefined' && 
+  ('__TAURI__' in window || 
+   (window.__TAURI_IPC__ !== undefined && typeof window.__TAURI_IPC__ === 'function'));
+```
+兼容Tauri 1.x和2.x的不同暴露方式。
+
+### 修复方案3：通过API调用结果检测
+```typescript
+let isTauri = false;
+try {
+  await import('@tauri-apps/api/dialog');
+  isTauri = true;
+} catch {
+  isTauri = false;
+}
+```
+通过动态导入结果动态检测环境。
