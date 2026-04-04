@@ -1,0 +1,49 @@
+# BUG SUMMARY
+Director Workspace layout reordering does not meet expected requirements. User feedback indicates the structural changes are still incorrect after implementation.
+
+## ENVIRONMENT & STATE CONTEXT
+- Project: AI Storyboard Director
+- Affected File: /src/features/director-board/ui/DirectorLayout.tsx
+- Current Layout Structure (after modification):
+  1. Model Selector (top)
+  2. Script Preview Box
+  3. Prompt Input Area
+  4. Compact Generate Button (right-aligned)
+  5. Shot Sequence Section
+- Date: 2026-04-04
+- Related Task: Layout reordering request (Preview → Input → Button vertical stack)
+
+## CODE CONTEXT
+Current main content structure:
+```tsx
+<main className="max-w-5xl mx-auto p-8 flex flex-col gap-8">
+  {/* Model Selector - Remains at top */}
+  <div className="w-full">{/* Model dropdown */}</div>
+  
+  {/* Preview Box - Moved above input */}
+  <div className="w-full">{/* Preview component */}</div>
+  
+  {/* Input Area */}
+  <div className="w-full">{/* Textarea */}</div>
+  
+  {/* Compact Button - Right aligned */}
+  <div className="flex justify-end">{/* Generate button */}</div>
+  
+  {/* Shot Sequence */}
+  <div className="w-full">{/* Shot cards */}</div>
+</main>
+```
+
+## ROOT CAUSE HYPOTHESIS
+1. **Partial Reorder Only**: The current implementation only reordered Preview/Input/Button elements but retained the Model Selector at the top of the workspace, which may not match the user's expected full layout restructuring
+2. **Unclear Scope**: User may have intended for the Model Selector to be positioned differently (e.g. below preview, next to button, or in header) which was not specified in the original request
+3. **Visual Hierarchy Mismatch**: The current spacing/order of elements may not align with user's desired workflow pattern
+
+## PROPOSED SOLUTIONS
+1. **Option 1**: Move Model Selector below Preview Box, placing it directly above the Input Area to maintain all controls in lower section
+2. **Option 2**: Move Model Selector into the header section to free up main workspace vertical space
+3. **Option 3**: Remove Model Selector entirely from this view and place it in a separate settings modal
+4. **Option 4**: Maintain Model Selector at top but adjust spacing/visual weight to better align with user expectations
+
+## NEXT STEPS
+Await user clarification on specific layout requirements before implementing further changes. No code modifications should be made until the expected structure is explicitly confirmed.

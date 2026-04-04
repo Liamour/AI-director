@@ -1,0 +1,37 @@
+# BUG SUMMARY
+Critical 404 resource loading errors preventing application from rendering. Next.js application assets fail to load with 404 status codes, resulting in blank page.
+
+## STACK TRACE / LOGS
+```
+❌ Failed to load resource: the server responded with a status of 404 (Not Found) - main-app.js:1
+❌ Failed to load resource: the server responded with a status of 404 (Not Found) - app-pages-internals.js:1
+❌ Failed to load resource: the server responded with a status of 404 (Not Found) - :3000/favicon.ico:1
+```
+*All core application JavaScript assets return 404 Not Found errors.*
+
+## ENVIRONMENT & STATE CONTEXT
+- Project: AI Storyboard Director
+- Runtime: Next.js 14.1.0 + Tauri 2.10.1
+- Expected Dev Server Port: 3000
+- Last Working State: Before workspace.tsx layout synchronization changes
+- Date: 2026-04-04
+- Affects: Both browser and Tauri desktop app
+
+## ROOT CAUSE HYPOTHESIS
+1. **Port Mismatch**: Next.js dev server is running on a different port than expected (not 3000), but Tauri/frontend is trying to load assets from port 3000
+2. **Next.js Build Cache Corruption**: Webpack compilation failed silently, resulting in missing asset files
+3. **Invalid Tauri Dev URL**: `tauri.conf.json` has incorrect `devPath` configuration pointing to wrong address
+4. **Next.js Output Configuration**: `next.config.js` has incorrect `basePath` or `assetPrefix` settings breaking asset paths
+5. **Port Conflict**: Another process is using port 3000, forcing Next.js to auto-bind to a different port
+
+## PROPOSED SOLUTIONS
+1. **Verify Dev Server Port**: Check terminal output to confirm which port Next.js is running on (look for `Local: http://localhost:XXXX` line)
+2. **Restart Development Server**: Stop the running `npm run tauri dev` process and restart to clear all caches
+3. **Check Tauri Configuration**: Verify `src-tauri/tauri.conf.json` has correct devPath: `"devPath": "http://localhost:3000"`
+4. **Clear Next.js Cache**: Delete `.next` folder and run `npm run dev` to rebuild from scratch
+5. **Kill Conflicting Processes**: Run `netstat -ano | findstr :3000` to identify and kill any process using port 3000
+
+## NEXT STEPS
+1. First confirm the actual port Next.js is running on from the dev server terminal output
+2. If port is not 3000, either kill the conflicting process or update Tauri devPath to match the actual port
+3. Clear all build caches and rebuild the application

@@ -1,0 +1,47 @@
+# BUG SUMMARY
+Next.js compilation failed due to missing export error: `importScriptFile` is not exported from '@/shared/lib/tauri-fs' module, preventing application from building/running.
+
+## STACK TRACE / LOGS
+```
+⚠️ ./src/pages/index.tsx
+Attempted import error: 'importScriptFile' is not exported from '@/shared/lib/tauri-fs' (imported as 'importScriptFile').
+
+Import trace for requested module:
+./src/pages/index.tsx
+```
+*Error repeats multiple times during compilation, blocking all builds.*
+
+## ENVIRONMENT & STATE CONTEXT
+- Project: AI Storyboard Director
+- Framework: Next.js 14.1.0
+- Language: TypeScript (Strict Mode)
+- Affected File: `/src/pages/index.tsx`
+- Missing Module: `/src/shared/lib/tauri-fs.ts`
+- Date: 2026-04-04
+- Impact: Complete build failure, application cannot run
+
+## CODE CONTEXT
+### Expected import in index.tsx:
+```tsx
+import { importScriptFile } from '@/shared/lib/tauri-fs';
+```
+
+### Actual exports in tauri-fs.ts (based on standard implementation):
+Typically exports only core FS utilities: `isTauri`, `readFile`, `writeFile`, `mkdir`, `exists`, etc. No `importScriptFile` function exported.
+
+## ROOT CAUSE HYPOTHESIS
+1. **Missing Export**: The `importScriptFile` function was never implemented or exported from the `tauri-fs.ts` module
+2. **Typo/Misnamed Function**: The function may exist under a different name (e.g. `readScriptFile`, `importFile`, etc.)
+3. **Deleted Function**: The function was accidentally removed during a previous refactoring
+4. **Incorrect Import Path**: The import is attempting to load from the wrong module path
+
+## PROPOSED SOLUTIONS
+1. **Check tauri-fs.ts exports**: Open `/src/shared/lib/tauri-fs.ts` and verify all exported functions
+2. **Fix Import**: If function exists under different name, correct the import statement in index.tsx
+3. **Implement Missing Function**: If the function is required, implement and export `importScriptFile` in tauri-fs.ts
+4. **Remove Dead Import**: If the function is no longer used, delete the import statement from index.tsx
+
+## NEXT STEPS
+1. First inspect `/src/shared/lib/tauri-fs.ts` to confirm current exports
+2. Resolve the import mismatch either by correcting the import or implementing the missing function
+3. Verify compilation succeeds after fix

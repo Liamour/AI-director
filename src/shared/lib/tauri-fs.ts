@@ -1,6 +1,6 @@
 import { isTauri } from '@tauri-apps/api/core'; 
 import { open } from '@tauri-apps/plugin-dialog'; 
-import { mkdir } from '@tauri-apps/plugin-fs'; 
+import { mkdir, readTextFile } from '@tauri-apps/plugin-fs'; 
 import { join } from '@tauri-apps/api/path';
 
 export const scaffoldProject = async (projectName: string): Promise<string> => { 
@@ -49,4 +49,39 @@ export const scaffoldProject = async (projectName: string): Promise<string> => {
     // Graceful degradation 
     return `/mock/local/projects/${projectName.trim()}`; 
   } 
+};
+
+export const importScriptFile = async (): Promise<string> => {
+  try {
+    const isTauriEnv = isTauri || (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window);
+    
+    if (!isTauriEnv) {
+      console.warn('[Mock] Web preview mode: Script import simulated');
+      return '// Mock imported script content\n\nThis is a sample script imported in web preview mode.\n\nIn Tauri desktop mode, this will allow you to select a local script file (.txt/.md/.json) and import its contents.';
+    }
+    
+    // Open file selection dialog
+    const selectedFile = await open({
+      multiple: false,
+      filters: [
+        {
+          name: 'Script Files',
+          extensions: ['txt', 'md', 'json', 'docx']
+        }
+      ],
+      title: 'Select Script File to Import'
+    });
+    
+    if (!selectedFile || Array.isArray(selectedFile)) {
+      throw new Error('No file selected or invalid selection');
+    }
+    
+    // Read file content
+    const content = await readTextFile(selectedFile);
+    return content;
+    
+  } catch (error) {
+    console.error("[CRITICAL] Script import failed. Reason:", error);
+    return '';
+  }
 }; 

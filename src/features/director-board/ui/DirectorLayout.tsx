@@ -1,85 +1,180 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { 
+  Brain, 
+  FileText, 
+  Plus, 
+  Send, 
+  Layers, 
+  FolderTree, 
+  Video
+} from "lucide-react";
 import ShotCard from "./ShotCard";
 import { Shot } from "@/core/types";
+import { useState } from "react";
+
+type ModelType = 'DeepSeek' | '豆包 (Doubao)' | 'Gemini' | 'GPT-4o';
 
 interface DirectorLayoutProps {}
 
 export default function DirectorLayout({}: DirectorLayoutProps) {
+  const [selectedModel, setSelectedModel] = useState<ModelType>('DeepSeek');
+  const [userPrompt, setUserPrompt] = useState('');
+  const [scriptContent, setScriptContent] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const models: ModelType[] = ['DeepSeek', '豆包 (Doubao)', 'Gemini', 'GPT-4o'];
+
   const mockShots: Shot[] = [
     { id: 'shot_1', sceneId: 'scene_1', dialogue: '', action: 'Wide establishing shot of a cyberpunk city street in the rain. Neon reflections.', status: 'completed', characters: [], cameraMovement: 'Pan right' },
     { id: 'shot_2', sceneId: 'scene_1', dialogue: '', action: 'Close up on the protagonist pulling their collar up against the cold.', status: 'generating', characters: [], cameraMovement: 'Static' },
     { id: 'shot_3', sceneId: 'scene_1', dialogue: '', action: 'POV shot looking down a dark alleyway. A shadow moves.', status: 'pending', characters: [], cameraMovement: 'Slow zoom in' },
   ];
 
+  const handleGenerate = async () => {
+    if (!userPrompt.trim() || isGenerating) return;
+    
+    try {
+      setIsGenerating(true);
+      setScriptContent(prev => prev ? `${prev}\n\n--- [Connecting to ${selectedModel}] ---` : `--- [Connecting to ${selectedModel}] ---`);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setScriptContent(prev => 
+        prev ? prev.replace(`--- [Connecting to ${selectedModel}] ---`, `--- [AI Generated - ${selectedModel}] ---\n\nGenerated script content will appear here...`)
+        : `--- [AI Generated - ${selectedModel}] ---\n\nGenerated script content will appear here...`
+      );
+    } catch (error) {
+      setScriptContent(prev => 
+        prev ? `${prev}\n\n--- [ERROR] Generation failed` : `--- [ERROR] Generation failed`
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.6, ease: "easeInOut" }}
-      className="h-screen w-full bg-[#1A1A1A] text-[#D1D5DB] flex flex-col overflow-hidden"
+      className="min-h-screen bg-[#0A0A0A] text-white font-sans"
     >
-      {/* Top Header - Global Title */}
-      <header className="h-14 border-b border-white/10 flex items-center px-6 shrink-0 bg-black/20">
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#FF5000] shadow-[0_0_12px_rgba(255,80,0,0.8)] animate-pulse" />
-          <h1 className="font-mono tracking-widest text-white font-bold">
-            AI 世纪导演 // 控制中心
-          </h1>
+      {/* Header */}
+      <header className="border-b border-white/10 p-8 backdrop-blur-xl bg-[#1A1A1A]/80">
+        <div className="max-w-5xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-[#FF5000] shadow-[0_0_12px_rgba(255,80,0,0.8)]" />
+            <h1 className="text-2xl font-bold tracking-tight">
+              DIRECTOR WORKSPACE
+            </h1>
+          </div>
+          <div className="flex items-center gap-3 text-sm font-mono text-white/60">
+            <FolderTree size={16} />
+            <span>PROJECT: UNNAMED</span>
+          </div>
         </div>
       </header>
 
-      {/* Middle Workspace - Sidebar + Canvas */}
-      <main className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Script Tree */}
-        <aside className="w-80 border-r border-white/10 flex flex-col bg-black/10 shrink-0">
-          <div className="h-14 border-b border-white/10 px-6 flex items-center bg-black/20">
-            <h2 className="text-white text-sm font-semibold font-mono">
-              剧本结构树
-            </h2>
+      {/* Main Content - Single Column Vertical Layout */}
+      <main className="max-w-5xl mx-auto p-8 flex flex-col gap-8">
+        {/* Top Level - Model Selector */}
+        <div className="w-full">
+          <div className="flex items-center gap-2 mb-3 text-white/70 text-sm font-medium">
+            <Brain size={16} />
+            <span>SELECT MODEL</span>
           </div>
-          <div className="flex-1 p-4 overflow-y-auto">
-            <div className="bg-[#262626] rounded-xl p-4 mb-3 border border-white/10">
-              <div className="text-white text-[14px] font-medium mb-1 font-mono">
-                开场场景
-              </div>
-              <div className="text-[#D1D5DB]/70 text-[12px] font-mono">
-                根据输入生成
-              </div>
-            </div>
-            <div className="bg-[#1A1A1A] rounded-xl p-4 mb-3 border border-white/10 hover:bg-[#262626] transition-colors cursor-pointer">
-              <div className="text-white/90 text-[14px] font-medium mb-1 font-mono">
-                场景 1: 介绍
-              </div>
-              <div className="text-[#D1D5DB]/50 text-[12px] font-mono">
-                3 个镜头 • 0 个素材
-              </div>
-            </div>
-            <div className="bg-[#1A1A1A] rounded-xl p-4 border border-white/10 hover:bg-[#262626] transition-colors cursor-pointer">
-              <div className="text-white/90 text-[14px] font-medium mb-1 font-mono">
-                场景 2: 冲突
-              </div>
-              <div className="text-[#D1D5DB]/50 text-[12px] font-mono">
-                0 个镜头 • 0 个素材
-              </div>
-            </div>
-          </div>
-        </aside>
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value as ModelType)}
+            disabled={isGenerating}
+            className="w-full bg-[#1A1A1A] border border-white/10 rounded-2xl px-4 py-3 text-white/80 focus:border-[#FF5000] focus:ring-1 focus:ring-[#FF5000] outline-none transition-all font-medium disabled:opacity-50 backdrop-blur-xl"
+          >
+            {models.map((model) => (
+              <option key={model} value={model} className="bg-[#1A1A1A]">
+                {model}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {/* Right Main Canvas - Visual Sequences */}
-        <section className="flex-1 overflow-y-auto p-8 relative">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-white text-lg font-semibold font-mono">
-              视觉分镜序列
-            </h2>
+        {/* Strictly Controlled Container - Preview → Input → Button Stack */}
+        <div className="flex flex-col w-full gap-4">
+          {/* FIRST CHILD: Node B - Script Engram Preview Box */}
+          <div className="w-full">
+            <div className="flex items-center gap-2 mb-3 text-white/70 text-sm font-medium">
+              <Layers size={16} />
+              <span>PREVIEW / OUTPUT</span>
+            </div>
+            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 flex flex-col backdrop-blur-xl">
+              <div className="mb-4 font-mono text-white/60 text-sm tracking-wider border-b border-white/5 pb-2">
+                SCRIPT PREVIEW
+              </div>
+              <textarea
+                value={scriptContent}
+                onChange={(e) => setScriptContent(e.target.value)}
+                placeholder="Generated script content will appear here..."
+                className="flex-1 w-full min-h-[200px] bg-transparent border-none rounded-xl p-0 text-white resize-vertical focus:outline-none font-mono text-sm placeholder:text-white/30"
+              />
+            </div>
+          </div>
+
+          {/* SECOND CHILD: Node A - Text Input / Textarea */}
+          <div className="w-full">
+            <div className="flex items-center gap-2 mb-3 text-white/70 text-sm font-medium">
+              <FileText size={16} />
+              <span>PROMPT INPUT</span>
+            </div>
+            <textarea
+              value={userPrompt}
+              onChange={(e) => setUserPrompt(e.target.value)}
+              disabled={isGenerating}
+              placeholder="Describe your script requirements, shot details, style preferences, etc..."
+              className="w-full min-h-[180px] bg-[#1A1A1A] border border-white/10 rounded-3xl p-6 text-white resize-vertical focus:outline-none focus:border-[#FF5000] focus:ring-1 focus:ring-[#FF5000] transition-all font-mono text-base placeholder:text-white/30 disabled:opacity-50 backdrop-blur-xl"
+            />
+          </div>
+
+          {/* THIRD CHILD: Node C - Compact Generate Button */}
+          <button
+            onClick={handleGenerate}
+            disabled={isGenerating || !userPrompt.trim()}
+            className={`py-1.5 px-4 text-sm w-fit self-start rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+              isGenerating || !userPrompt.trim()
+                ? 'bg-[#1A1A1A] text-white/30 cursor-not-allowed border border-white/10'
+                : 'bg-[#FF5000] text-white hover:bg-[#FF6A33] hover:shadow-lg hover:shadow-[#FF5000]/20 border border-[#FF5000]/50'
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                GENERATING...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                GENERATE
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Shot Sequence Section */}
+        <div className="w-full">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2 text-white/70 text-sm font-medium">
+              <Video size={16} />
+              <span>SHOT SEQUENCE</span>
+            </div>
             <div className="flex gap-3">
-              <button className="px-4 py-2 bg-[#262626] border border-white/10 hover:bg-white/5 text-white rounded-xl text-sm transition-all font-mono">
-                添加镜头
+              <button className="px-4 py-2 bg-[#1A1A1A] border border-white/10 hover:bg-white/5 text-white rounded-2xl text-sm transition-all font-medium flex items-center gap-2 backdrop-blur-xl">
+                <Plus size={16} />
+                ADD SHOT
               </button>
-              <button className="px-4 py-2 bg-[#FF5000] border border-white/20 text-white rounded-xl text-sm font-medium transition-all hover:shadow-lg font-mono">
-                全部生成
+              <button className="px-4 py-2 bg-[#FF5000] border border-[#FF5000]/50 text-white rounded-2xl text-sm font-medium transition-all hover:shadow-lg hover:shadow-[#FF5000]/20 backdrop-blur-xl">
+                GENERATE ALL
               </button>
             </div>
           </div>
@@ -89,26 +184,8 @@ export default function DirectorLayout({}: DirectorLayoutProps) {
               <ShotCard key={shot.id} shot={shot} />
             ))}
           </div>
-        </section>
-      </main>
-
-      {/* Bottom Command Bar - Chat / Action */}
-      <footer className="border-t border-white/10 bg-black/40 p-4 shrink-0">
-        <div className="max-w-6xl mx-auto">
-          <div className="rounded-2xl border border-white/10 bg-[#1A1A1A] shadow-inner p-2 flex items-center gap-4">
-            <input
-              type="text"
-              placeholder="输入导演指令... 例如：'将镜头 2 替换为赛博朋克风格的雨夜特写'"
-              className="bg-transparent border-none focus:ring-0 text-white w-full px-4 py-2 outline-none font-mono"
-            />
-            <button className="bg-[#FF5000] rounded-full p-3 flex items-center justify-center hover:shadow-[0_0_15px_rgba(255,80,0,0.5)] transition-all">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
-          </div>
         </div>
-      </footer>
+      </main>
     </motion.div>
   );
 }

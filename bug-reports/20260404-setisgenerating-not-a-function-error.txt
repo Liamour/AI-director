@@ -1,0 +1,81 @@
+# BUG SUMMARY
+Application crashes when clicking "Generate Script" button with runtime TypeError: `setIsGenerating is not a function`. This blocks all script generation functionality.
+
+## STACK TRACE / LOGS
+```
+Unhandled Runtime Error
+TypeError: setIsGenerating is not a function
+
+Source:
+src\pages\workspace.tsx (59:6) @ setIsGenerating
+
+57 |   console.error('Generation failed:', error);
+58 | } finally {
+> 59 |   setIsGenerating(false);
+   |   ^
+60 | }
+```
+*Error occurs immediately after clicking generate button during the finally block execution.*
+
+## ENVIRONMENT & STATE CONTEXT
+- Project: AI Storyboard Director
+- Current Stage: Vector Alpha Stage 2 (Data-to-UI Mapping)
+- Affected File: `/src/pages/workspace.tsx`
+- Related Change: Recent refactor of Zustand store to use `scriptData` instead of `scriptContent`
+- Date: 2026-04-04
+- Impact: Complete generation functionality outage, application crashes on generate attempt
+
+## CODE CONTEXT
+### Store Export in `scriptStore.ts`:
+```ts
+interface ScriptStore {
+  // ... other fields
+  isGenerating: boolean;
+  // NO setIsGenerating action defined in interface
+  simulateGeneration: () => Promise<void>;
+  // ... other actions
+}
+
+// store implementation only has simulateGeneration which updates isGenerating internally
+// No public setIsGenerating action exposed
+```
+
+### Workspace Component Usage:
+```tsx
+// workspace.tsx attempts to destructure non-existent action
+const { 
+  projectName, 
+  projectPath, 
+  scriptData, 
+  isGenerating,
+  setScriptData,
+  setIsGenerating // ❌ This action does not exist in the store
+} = useScriptStore();
+
+// Called in handleGenerate finally block
+finally {
+  setIsGenerating(false); // ❌ Crashes here
+}
+```
+
+## ROOT CAUSE HYPOTHESIS
+1. **Missing Store Action**: The `setIsGenerating` action was never defined and exported from the Zustand store
+2. **Refactoring Oversight**: During the store migration from `scriptContent` to `scriptData`, the new `setIsGenerating` action was not added to the store interface or implementation
+3. **State Encapsulation Violation**: The `isGenerating` state was previously only modified internally by the `simulateGeneration` method, with no public setter exposed
+
+## PROPOSED SOLUTIONS
+1. **Add Missing Store Action**: Update `scriptStore.ts` to add and export the `setIsGenerating` action:
+   ```ts
+   // Add to interface
+   setIsGenerating: (value: boolean) => void;
+   
+   // Add to implementation
+   setIsGenerating: (value) => set({ isGenerating: value }),
+   ```
+   
+2. **Alternative Fix**: Use the existing `simulateGeneration` method if appropriate for the generation flow, or refactor generation logic to manage isGenerating state locally in the component
+
+## NEXT STEPS
+1. Implement the missing `setIsGenerating` action in the Zustand store
+2. Verify generation functionality works without runtime errors
+3. Test edge cases including failed generation attempts to ensure finally block executes correctly

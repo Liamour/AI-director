@@ -1,0 +1,89 @@
+# BUG SUMMARY
+Page becomes completely blank and unrendered after synchronizing layout changes to src/pages/workspace.tsx. No UI elements appear in either browser preview or Tauri desktop app after the latest code modification.
+
+## STACK TRACE / LOGS
+Tauri dev server runs without build errors:
+```
+▲ Next.js 14.1.0 - Local: http://localhost:3000
+✓ Ready in 7.2s
+webpack compiled successfully
+```
+*Observed behavior: White/blank screen when accessing /workspace page. No UI elements render at all.*
+
+## ENVIRONMENT & STATE CONTEXT
+- Project: AI Storyboard Director
+- Runtime: Both browser (Chrome/Edge) and Tauri 2.10.1 desktop app affected
+- Last Change: Layout synchronization of workspace.tsx to match Preview→Input→Button order
+- Affected Page: /workspace (workspace.tsx)
+- Director Board Page: /director-board still renders correctly with no issues
+- Date: 2026-04-04
+
+## CODE CONTEXT
+### Modified section in workspace.tsx:
+```tsx
+{/* Strictly Controlled Container - Preview → Input → Button Stack */}
+<div className="flex flex-col w-full gap-4">
+  {/* FIRST: Script Engram Preview (Top of group) */}
+  <div className="w-full bg-black/40 border border-white/5 rounded-3xl p-6 flex flex-col">
+    <div className="mb-4 font-mono text-white/60 text-sm tracking-wider border-b border-white/5 pb-2">
+      PREVIEW / OUTPUT
+    </div>
+    <textarea
+      value={scriptContent}
+      onChange={(e) => setScriptContent(e.target.value)}
+      placeholder="Script content will appear here..."
+      className="flex-1 w-full min-h-[400px] bg-transparent border-none rounded-xl p-0 text-white resize-vertical focus:outline-none font-mono text-sm placeholder:text-white/30"
+    />
+  </div>
+
+  {/* SECOND: Textarea / Input Area (Middle) */}
+  <div className="w-full">
+    <textarea
+      value={userPrompt}
+      onChange={(e) => setUserPrompt(e.target.value)}
+      disabled={isGenerating}
+      placeholder="Describe your script requirements, style, character settings, etc..."
+      className="w-full min-h-[200px] bg-[#1A1A1A] border border-white/10 rounded-3xl p-6 text-white resize-vertical focus:outline-none focus:border-[#FF5000] focus:ring-1 focus:ring-[#FF5000] transition-all font-mono text-base placeholder:text-white/30 disabled:opacity-50"
+    />
+  </div>
+
+  {/* THIRD: Generate Button (Bottom, compact left-aligned) */}
+  <button
+    onClick={handleGenerate}
+    disabled={isGenerating || !userPrompt.trim()}
+    className={`py-1.5 px-4 text-sm w-fit self-start rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+      isGenerating || !userPrompt.trim()
+        ? 'bg-[#1A1A1A] text-white/30 cursor-not-allowed border border-white/10'
+        : 'bg-[#FF5000] text-white hover:bg-[#FF6A33] hover:shadow-lg hover:shadow-[#FF5000]/20 border border-[#FF5000]/50'
+    }`}
+  >
+    {isGenerating ? (
+      <>
+        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        GENERATING...
+      </>
+    ) : (
+      'GENERATE SCRIPT'
+    )}
+  </button>
+</div>
+```
+
+## ROOT CAUSE HYPOTHESIS
+1. **JSX Syntax Error**: Possible mismatched closing tags or invalid markup introduced during the layout modification
+2. **Runtime State Error**: scriptContent or userPrompt state values causing rendering failure
+3. **Hot Module Replacement (HMR) Issue**: Next.js HMR cache corrupted after code update, failing to refresh the page properly
+4. **CSS Rendering Conflict**: New flex container styles causing layout collapse or zero-height rendering
+5. **TypeScript Compilation Error**: Uncaught type error preventing component rendering
+
+## PROPOSED SOLUTIONS
+1. **Check Browser Console**: Open DevTools (F12) to view JavaScript errors and stack traces
+2. **Force Hard Refresh**: Press Ctrl+Shift+R in browser to bypass cache and reload the page
+3. **Restart Dev Server**: Stop the running `npm run tauri dev` process and restart to clear build cache
+4. **Validate JSX Syntax**: Check for unclosed tags, mismatched quotes, or invalid className syntax in workspace.tsx
+5. **Rollback Verification**: Temporarily revert workspace.tsx to previous working version to confirm the issue is related to layout changes
+
+## NEXT STEPS
+- No code modifications should be made before checking browser console errors first
+- Collect exact error messages from DevTools to narrow down root cause
+- Verify component state values to identify if the issue is build-related or code-related

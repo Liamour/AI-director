@@ -1,0 +1,74 @@
+# BUG SUMMARY
+Layout order mismatch when navigating to AI Workspace in Tauri desktop app: Preview Box appears at bottom while Text Input remains at top, despite DirectorLayout.tsx being updated to correct order. The issue does not occur in browser preview, only in Tauri runtime.
+
+## STACK TRACE / LOGS
+No explicit error messages. Tauri dev server runs successfully:
+```
+▲ Next.js 14.1.0 - Local: http://localhost:3000
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.49s
+Running `target\debug\app.exe`
+✓ Ready in 7.2s
+```
+*Observed behavior: Input Box renders above Preview Box in Tauri app window, despite code changes indicating reverse order.*
+
+## ENVIRONMENT & STATE CONTEXT
+- Project: AI Storyboard Director
+- Runtime: Tauri 2.10.1 Desktop App (Windows)
+- Affected Pages: 
+  - `/workspace` (workspace.tsx): UNTOUCHED, legacy layout (Input → Button → Preview)
+  - `/director-board` (DirectorLayout.tsx): UPDATED, correct layout (Preview → Input → Button)
+- Browser Behavior: DirectorLayout renders correctly with Preview at top in Chrome/Edge
+- Tauri Behavior: Navigation lands on page with incorrect input-on-top layout
+- Date: 2026-04-04
+
+## CODE CONTEXT
+### Current `/workspace` page structure (UNMODIFIED):
+```tsx
+<main className="max-w-4xl mx-auto p-8 flex flex-col gap-8">
+  {/* 1. Model Selector (TOP) */}
+  <select>{/* Model dropdown */}</select>
+  
+  {/* 2. Input Area (MIDDLE) */}
+  <textarea>{/* Prompt input */}</textarea>
+  
+  {/* 3. Generate Button */}
+  <button>{/* Generate */}</button>
+  
+  {/* 4. Preview Box (BOTTOM) */}
+  <div>{/* Script preview */}</div>
+</main>
+```
+
+### Current `/director-board` page structure (CORRECT):
+```tsx
+<main className="max-w-5xl mx-auto p-8 flex flex-col gap-8">
+  {/* 1. Model Selector */}
+  <select>{/* Model dropdown */}</select>
+  
+  {/* 2. Preview Box (TOP of stack) */}
+  <div>{/* Script preview */}</div>
+  
+  {/* 3. Input Area (MIDDLE) */}
+  <textarea>{/* Prompt input */}</textarea>
+  
+  {/* 4. Generate Button (BOTTOM) */}
+  <button>{/* Generate */}</button>
+</main>
+```
+
+## ROOT CAUSE HYPOTHESIS
+1. **Incorrect Page Navigation**: The app is navigating to the legacy `/workspace` page instead of the updated `/director-board` page when jumping to "AI Workspace"
+2. **Routing Mismatch**: Tauri internal routing configuration is pointing to the wrong page path for "AI Workspace" navigation
+3. **Cache Staleness**: Tauri is serving cached version of the page before layout changes were applied
+4. **Dual Component Drift**: Two separate workspace components exist with different layout implementations, leading to inconsistency
+
+## PROPOSED SOLUTIONS
+1. **Verify Navigation Target**: Check which path the "AI Workspace" navigation button links to, ensure it points to `/director-board` not `/workspace`
+2. **Clear Tauri Cache**: Run `cargo clean` in `src-tauri` directory, then rebuild with `npm run tauri dev` to eliminate cached assets
+3. **Sync Layouts**: Apply the same Preview→Input→Button order to `/workspace.tsx` component to ensure consistency across both pages
+4. **Verify Routing Config**: Check Next.js page routes and Tauri navigation logic to ensure correct page resolution
+
+## NEXT STEPS
+- No code modifications should be made until navigation target is confirmed
+- First verify which page is actually being rendered in Tauri by adding temporary identifiers to both pages
+- Clear Tauri build cache and test again before implementing any code changes

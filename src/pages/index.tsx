@@ -2,7 +2,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { useScriptStore } from "@/store/scriptStore";
-import { scaffoldProject, importScriptFile } from "@/shared/lib/tauri-fs";
+import { scaffoldProject } from "@/shared/lib/tauri-fs";
+import { open } from '@tauri-apps/plugin-dialog'; 
+import { readTextFile } from '@tauri-apps/plugin-fs';
 
 type ActionType = "generate" | "import" | null;
 
@@ -33,8 +35,22 @@ export default function EntryHub() {
 
       // 3. 处理导入逻辑
       if (actionType === "import") {
-        const scriptContent = await importScriptFile();
-        setScriptContent(scriptContent);
+        // 1. Open Native File Dialog 
+        const selectedPath = await open({ 
+          multiple: false, 
+          filters: [{ 
+            name: 'Text/Markdown', 
+            extensions: ['txt', 'md'] 
+          }] 
+        }); 
+    
+        if (!selectedPath) return; // User canceled 
+    
+        // 2. Read the physical file content 
+        const fileContent = await readTextFile(selectedPath as string); 
+    
+        // 3. Store raw script for workspace handoff
+        sessionStorage.setItem('imported_raw_script', fileContent); 
       }
 
       // 4. 跳转到工作区

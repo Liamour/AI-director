@@ -1,0 +1,75 @@
+# BUG SUMMARY
+Tauri desktop application builds and runs successfully with `npm run tauri dev` but no window is displayed on screen. The command completes without errors but no UI appears.
+
+## STACK TRACE / LOGS
+```
+> ai-storyboard-director@0.1.0 tauri
+> tauri dev
+
+     Running BeforeDevCommand (`npm run dev`)
+
+> ai-storyboard-director@0.1.0 dev
+> next dev
+
+   ▲ Next.js 14.1.0
+   - Local:        http://localhost:3000
+
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching D:\Amour\trae project\ai director\src-tauri for changes...
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.49s
+     Running `target\debug\app.exe`
+ ✓ Ready in 7.2s
+```
+*No error messages in output. Process runs successfully but window not visible.*
+
+## ENVIRONMENT & STATE CONTEXT
+- Project: AI Storyboard Director
+- OS: Windows 11
+- Tauri Version: 2.10.1
+- Next.js Version: 14.1.0
+- Dev Server Running: http://localhost:3000 (accessible via browser)
+- Tauri Build: Success, app.exe running in background
+- Date: 2026-04-04
+
+## CODE CONTEXT
+Check `src-tauri/tauri.conf.json` window configuration:
+```json
+{
+  "tauri": {
+    "windows": [
+      {
+        "title": "AI Storyboard Director",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": true,
+        "decorations": true
+      }
+    ]
+  }
+}
+```
+
+## ROOT CAUSE HYPOTHESIS
+1. **Window Off-Screen**: The Tauri window is being rendered outside the visible screen bounds (common on multi-monitor setups or after display resolution changes)
+2. **Visible Flag Mismatch**: The `visible` property in tauri.conf.json may not be properly applied, or there's a runtime override hiding the window
+3. **Admin Permissions**: The app requires elevated permissions to display windows on some Windows system configurations
+4. **Background Process Conflict**: Multiple instances of app.exe running in background preventing new window from showing
+5. **WebView2 Runtime Issue**: Missing or corrupted Microsoft Edge WebView2 runtime required for Tauri rendering
+
+## PROPOSED SOLUTIONS
+1. **Immediate Fix**: Press `Alt + Tab` to cycle through open windows, or check Task Manager for running `app.exe` processes and kill them before retrying
+2. **Force Window Position**: Add explicit `x` and `y` coordinates to the window config in `tauri.conf.json`:
+   ```json
+   "x": 100,
+   "y": 100
+   ```
+3. **Reset Window State**: Delete `%APPDATA%/ai-storyboard-director` folder to clear saved window positions
+4. **Verify WebView2**: Download and install latest Microsoft Edge WebView2 Runtime from https://developer.microsoft.com/en-us/microsoft-edge/webview2/
+5. **Run as Administrator**: Right-click Command Prompt/PowerShell and select "Run as administrator" before executing `npm run tauri dev`
+
+## NEXT STEPS
+1. Attempt the immediate fixes first to verify if window is simply off-screen
+2. If problem persists, modify tauri.conf.json to add explicit window coordinates
+3. Check Task Manager for background app.exe processes and terminate them if found
