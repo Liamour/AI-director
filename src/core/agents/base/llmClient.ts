@@ -15,6 +15,19 @@ export interface LlmCallResult {
   raw: unknown;
 }
 
+/**
+ * Accept both forms of `base url` users tend to paste:
+ *   - full action endpoint:  https://api.openai.com/v1/chat/completions
+ *   - sdk-style base:        https://api.openai.com/v1   ← OpenAI SDK convention
+ * If the action verb is missing we append `/chat/completions`.
+ * Trailing whitespace and slashes are stripped.
+ */
+export function resolveChatCompletionsUrl(baseUrl: string): string {
+  const trimmed = baseUrl.trim().replace(/\/+$/, '');
+  if (/\/chat\/completions$/i.test(trimmed)) return trimmed;
+  return `${trimmed}/chat/completions`;
+}
+
 export async function callLlm(
   backbone: Backbone,
   messages: ChatMessage[],
@@ -27,6 +40,8 @@ export async function callLlm(
     throw new Error(`backbone "${backbone.name}" missing baseUrl or modelId`);
   }
 
+  const url = resolveChatCompletionsUrl(backbone.baseUrl);
+
   const body = {
     model: backbone.modelId,
     messages,
@@ -36,19 +51,32 @@ export async function callLlm(
       : {}),
   };
 
-  const res = await fetch(backbone.baseUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${backbone.apiKey}`,
-    },
-    body: JSON.stringify(body),
-    signal: options.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${backbone.apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: options.signal,
+    });
+  } catch (err) {
+    // node's undici reports network/tls/dns failures as a bare "fetch failed";
+    // the actual reason is on err.cause. surface both so the user can debug.
+    const cause = err instanceof Error && 'cause' in err ? (err as { cause?: unknown }).cause : null;
+    const causeMsg =
+      cause instanceof Error ? cause.message : cause ? String(cause) : '';
+    const baseMsg = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `fetch failed → ${url}${causeMsg ? ` · ${causeMsg}` : ` · ${baseMsg}`}`
+    );
+  }
 
   if (!res.ok) {
     const text = await safeText(res);
-    throw new Error(`llm http ${res.status}: ${text.slice(0, 240)}`);
+    throw new Error(`llm http ${res.status} → ${url} · ${text.slice(0, 240)}`);
   }
 
   const json = await res.json();
