@@ -24,6 +24,198 @@
 
 ---
 
+## 1.5 产品五阶段架构（v0.2 设计目标）
+
+> 本节描述**产品最终形态**。当前 MVP（见第 5 节）实现的是 Stage 1 的简化版（一次 LLM 调用直出 ScriptEngram），后续按下述阶段拓展。
+>
+> 设计原则：① 每阶段输出**结构化资产 + 落地文件**，跨阶段以 JSON 契约通信；② 每阶段都是 "AI 先提议 → 用户编辑确认" 的双步流程；③ 所有耗费算力的产出（图、视频）必须可复现（保留 prompt / seed / model / ref 元数据）。
+
+### Stage 0 — 项目初始化
+
+用户创建项目时**一次性锁定**全局参数（中途修改成本极高）：
+
+| 字段 | 示例 | 影响范围 |
+|---|---|---|
+| 体裁 / format | 剧集 / 短视频 / 漫画 / 动画 | 决定剧本结构（集数、单集时长） |
+| 输出比例 | 16:9 / 9:16 / 1:1 / 4:5 | 全部图像与视频画幅 |
+| 美术风格 | 写实 / 赛博 / 二次元 / 油画 | 全局 prompt 注入 + style LoRA |
+| 风格参考图 | 0-3 张用户上传 | IP-Adapter style 注入 |
+| LLM 后端 | OpenAI 兼容网关 URL + key + model | Stage 1/1.5 |
+| 渲染后端 | 云端图 API / 本地 ComfyUI | Stage 1.5 / 2 |
+
+**项目目录（落地）**：
+
+```
+<project-root>/
+├── project.json                # Stage 0 元数据
+├── 总剧本.md                    # Stage 1 主剧本（散文 + 对白）
+├── 总剧本.index.json           # Stage 1 结构化索引（分集边界、角色/场景索引）
+├── 剧集分镜/
+│   ├── EP01/
+│   │   ├── 剧本.md             # 单集散文剧本
+│   │   ├── 脚本.json           # 单集 beat list（分镜脚本）
+│   │   ├── 关键帧/             # Stage 2 输出
+│   │   │   ├── beat-01.png
+│   │   │   ├── beat-01.meta.json
+│   │   │   └── ...
+│   │   └── 视频/               # Stage 3 输出
+│   │       └── beat-01.mp4
+│   └── EP02/...
+├── 人物/                        # Stage 1.5 输出
+│   ├── Vex/
+│   │   ├── bible.json          # 角色设定（外貌 prompt / 性格 / 关系网）
+│   │   ├── ref/                # 用户确认的锁定参考图（1-3 张）
+│   │   ├── candidates/         # AI 生成的备选图（用户从中挑）
+│   │   └── lora.safetensors    # （可选）训练得到的角色 LoRA
+│   └── ...
+├── 场景/
+│   ├── 摩天大楼顶层/
+│   │   ├── bible.json
+│   │   └── ref/
+│   └── ...
+└── .ai-director/                # 工具元数据（不展示给用户）
+    ├── version-history/         # 每次保存自动 snapshot
+    └── llm-traces/              # 调试用 LLM 调用日志
+```
+
+### Stage 1 — 故事（Story）
+
+输入：用户一句话 idea  
+输出：总剧本 + 分集 + 每集分镜脚本
+
+**子流程**：
+
+1. **Idea → 总剧本草稿**：LLM 一次输出整个故事概要（散文 + 对白，不分集）
+2. **AI 自动分集**：按叙事节奏切 N 集，每集附"为何在此断"的说明
+3. **用户调整分集**：拖拽集边界 / 合并 / 拆分 / 重命名
+4. **进入单集编辑**（每集独立选项卡）：
+   - 主区：单集剧本编辑器（划选文字 → 悬浮 AI 续写 / 改写 / 加紧 / 加长）
+   - 右上：本集出场角色 / 场景列表（结构化抽取，自动同步到 Stage 1.5）
+   - 右下：单集分镜脚本（按 **beat 节拍**切分，不是 shot）
+5. **保存 → 落地到 `剧集分镜/EP**`**
+
+**关键决策**：分镜脚本的颗粒度是 **beat（叙事节拍）**而非 shot（镜头）。一个 beat 对应 Stage 2 的一张关键帧；具体运镜留到 Stage 3 在 beat 内扩展。这避免 Stage 1 被迫陷入摄影决策。
+
+### Stage 1.5 — 角色 & 场景 Bible（**关键插入点**）
+
+> ⚠ **缺这个阶段，Stage 2 的角色一致性会全部崩溃**。原因见 §10 "技术债与风险清单"。
+
+**为什么必须有**：FLUX / SDXL 等 t2i 模型**无法仅凭文字描述跨张生出"同一个人"**。每张图的角色长相会漂移。必须在 Stage 2 之前锁死参考图（ref）。
+
+**子流程**：
+
+1. **AI 抽取角色清单**：扫总剧本，对每个具名角色生成结构化 `bible.json`（外貌 / 服装 / 性格 / 关系网）
+2. **AI 候选图生成**：每角色生 4-8 张候选肖像
+3. **用户选定 / 换抽**：从候选挑 1-3 张确认为 ref → 落 `人物/<name>/ref/`
+4. **场景同理**：抽场景清单 → 生候选 → 用户确认 ref
+5. **可选 · 角色 LoRA 训练**：用户确认的 ref 图跑 5-10 分钟训练轻量 LoRA（FLUX 生态有开源方案）。一致性强于 IP-Adapter。
+
+完成后，所有后续生图通过 IP-Adapter 或 LoRA 注入这些 ref，实现跨镜头同一张脸 / 同一个场景。
+
+### Stage 2 — 关键帧（Visual）
+
+输入：单集分镜脚本（beat list）+ Bible refs  
+输出：每 beat 一张确认的关键帧图 + meta
+
+**子流程**：
+
+1. **AI 关键帧分析**：扫单集脚本，给每 beat 自动生 image prompt（融合 beat 描述 + 出场角色 ref + 场景 ref + 项目级风格令牌）
+2. **用户调整**：可编辑每 beat 的 prompt / 增删 beat / 重排序
+3. **批量出图**：当前已实现的 `/api/render` + ComfyUI 路径（见第 5 节）
+4. **单帧迭代**：点任一帧 → 重抽 / 微调 prompt / 换 seed / 换比例
+5. **确认锁定**：满意后落 `剧集分镜/EP/关键帧/`
+
+**关键工程要求**：每张关键帧附 `meta.json`（prompt / seed / model / refsUsed / width / height / generatedAt），**确保可复现**。Stage 3 必须能反查这张图怎么来的。
+
+### Stage 3 — 动态（Motion，规划中）
+
+> 项目当前 ComfyUI 已装 WAN 2.2 i2v 模型（`smoothMixWan2214BI2V_t2vHighV30`、`DasiwaWAN22I2V14BLightspeed_*`）—— Stage 3a 直接复用。
+
+| 子阶段 | 输入 | 输出 | 实现 |
+|---|---|---|---|
+| 3a · 单帧动起来 | 关键帧 + 4-8 词运镜描述 | 4-6 秒 i2v 片段 | 本地 WAN 2.2 i2v / 可选云端 Kling, Runway Gen-3 |
+| 3b · 配音 & 字幕 | 单集脚本台词 | TTS 音轨（按角色音色）+ SRT | 云端 TTS（豆包 / GPT-4o-tts / ElevenLabs） |
+| 3c · 时间线合成 | 全部 i2v 片段 + 音轨 | 单集 mp4 | ffmpeg 命令链 / 内嵌轻量 NLE |
+| 3d · 导出 | 整片 / 故事板 | mp4 / pitch deck pptx / PDF | 复用 docx/pptx skill |
+
+**3a 走通即得 animatic**（动态故事板），对剧本审片已经够用。3b/3c/3d 后续。
+
+### 跨阶段数据契约（最小必需，待落 `src/core/types/`）
+
+```ts
+// project.json
+interface ProjectMeta {
+  id: string;
+  name: string;
+  format: 'series' | 'shortform' | 'comic' | 'animation';
+  aspectRatio: '16:9' | '9:16' | '1:1' | '4:5';
+  style: { preset: string; refImages: string[]; loraTags?: string[] };
+  llmBackend: { baseUrl: string; modelId: string };
+  renderBackend: { kind: 'cloud' | 'comfyui'; ...config };
+  createdAt: string;
+  schemaVersion: number;
+}
+
+// 总剧本.index.json（伴随总剧本.md）
+interface ScriptIndex {
+  episodes: Array<{ id: string; title: string; charSpan: [number, number]; charactersInEpisode: string[]; scenesInEpisode: string[]; }>;
+  characters: string[];   // 角色 id 全集
+  scenes: string[];       // 场景 id 全集
+}
+
+// 单集脚本.json
+interface EpisodeScript {
+  id: string;
+  title: string;
+  beats: Beat[];
+}
+interface Beat {
+  id: string;
+  summary: string;                 // 一句话节拍描述
+  characters: Array<{ id: string; role: 'protagonist' | 'supporting' | 'extra' }>;
+  scene: { id: string };
+  dialog?: Array<{ char: string; line: string }>;
+  imagePromptDraft?: string;       // Stage 2 输入候选
+}
+
+// 角色 bible.json
+interface CharacterBible {
+  id: string;
+  name: string;
+  appearance: string;              // 外貌 prompt（用于 t2i）
+  personality: string;             // 性格（用于剧本一致性）
+  relations: Array<{ to: string; type: string }>;
+  refs: Array<{ path: string; isPrimary: boolean }>;
+  loraPath?: string;
+}
+
+// 关键帧 meta.json
+interface KeyframeMeta {
+  beatId: string;
+  prompt: string;
+  negativePrompt?: string;
+  seed: number;
+  model: string;
+  refsUsed: string[];              // 用了哪些 character/scene ref（路径）
+  width: number;
+  height: number;
+  generatedAt: string;
+  durationMs: number;
+}
+```
+
+### 与早期方案的差异
+
+| 早期方案 | v0.2 修订 | 原因 |
+|---|---|---|
+| Stage 1 直接做剧本 + 脚本 | 加 Stage 0（项目元数据） | 风格 / 比例 / 格式必须项目级锁定 |
+| Stage 1 → Stage 2 直连 | 中间插 Stage 1.5（Bible） | t2i 跨张一致性的工程必经之路 |
+| 关键帧 = 镜头 | 关键帧 = beat | Stage 1 不需要决定运镜 |
+| Stage 3 未定 | 切 3a/b/c/d 四步 | 用户已有 WAN i2v 资产，3a 是"白嫖" |
+| 数据格式未指 | 强契约：每阶段 JSON + 资产文件 | 跨阶段引用 / 可复现 / 协作可能 |
+
+---
+
 ## 2. 技术栈
 
 | 层 | 技术 | 版本 | 关键说明 |
@@ -311,23 +503,52 @@ npm run tauri build            # 打包为 .exe / .app / .deb
 
 ---
 
-## 14. 推荐的近期路线图（接手后 14 天）
+## 14. 推荐的近期路线图（v0.2 设计目标对齐）
 
-**Week 1 — 稳定与收口**
-1. 修技术债 #2（类型合并）、#3（模型下拉联动）
-2. `/api/generate` 加超时 + 错误码 UX
-3. 删除 DirectorLayout 死代码 / 或重构进新 feature
+> 围绕 §1.5 的五阶段架构展开。已完成项标 ✅。
 
-**Week 2 — 功能扩面**
-1. 实现选区悬浮菜单的「✨ AI ENHANCE」回调（局部 prompt + 替换）
-2. Asset 模块：把 ScriptEngram 写入项目目录的 `脚本/script.json`
-3. 多 Scene 并发生成进度条
-4. `keyring` 集成，移除 localStorage API Key
+**Sprint 1 — Stage 0 落地（项目元数据）**
+- [ ] `ProjectMeta` 类型定义至 `src/core/types/project.ts`
+- [ ] 项目创建弹窗扩展：体裁 / 比例 / 风格 / 风格参考图 / 后端选择
+- [ ] `project.json` 物理落盘（替换现有 sessionStorage 暂存）
+- [ ] Zustand store 改造：`useProjectStore` 持久化项目元数据
 
-**Week 3+ — 长线**
-- 流式 SSE 输出
-- 图像生成（Gemini Vision / SD-API）→ Shot 缩略图
-- 导出 PDF / Markdown / 分镜图册
+**Sprint 2 — Stage 1 完整化（剧本编辑）**
+- [ ] 剧本编辑器：划选悬浮 AI 菜单（续写 / 改写 / 加紧 / 加长）
+- [ ] AI 自动分集 + 用户拖拽调整
+- [ ] 单集独立选项卡 UI（左剧本 / 右上角色场景列表 / 右下脚本）
+- [ ] `EpisodeScript` 结构化 JSON 落盘 + 双向同步（编辑 md 时自动更新 index）
+
+**Sprint 3 — Stage 1.5 角色 Bible（关键里程碑）** 🔥
+- [ ] AI 抽角色清单 + 自动生 `bible.json`
+- [ ] 候选肖像批量生成 UI（4-8 张缩略图选片）
+- [ ] 用户确认 ref → 落 `人物/<name>/ref/`
+- [ ] 场景 Bible 同上
+- [ ] **关键依赖**：ComfyUI 安装 IP-Adapter 扩展 + 下载权重（约 1GB）
+- [ ] 工作流改造：Stage 2 的渲染调用注入对应 ref 图
+
+**Sprint 4 — Stage 2 闭环（关键帧迭代）**
+- [x] 多 Agent 编排（Director / Screenwriter / Cinematographer）— 已完成
+- [x] 双后端渲染（云端 + 本地 ComfyUI）— 已完成
+- [ ] 单帧重抽 / 微调 prompt / 换 seed UI
+- [ ] `KeyframeMeta` 元数据落盘（确保可复现）
+- [ ] 整集批量出图进度条 + 失败重试
+
+**Sprint 5 — Stage 3a · 单帧动起来（Animatic v1）**
+- [ ] 利用已有 WAN 2.2 i2v 模型，加 ComfyUI i2v 工作流
+- [ ] 关键帧右键 → "让它动起来"，输出 4-6 秒 mp4
+- [ ] 简易时间线 UI（拼起来播放预览）
+
+**Sprint 6+ — Stage 3 完整化（音 / 剪 / 出片）**
+- [ ] TTS 配音（按角色音色）+ SRT 字幕
+- [ ] ffmpeg 串接整集 mp4
+- [ ] 故事板 PDF / pitch deck pptx 导出（复用 docx/pptx skill）
+
+**横切关注点（贯穿所有 Sprint）**
+- [ ] 版本历史：每次保存 snapshot 到 `.ai-director/version-history/`
+- [ ] `keyring` 集成，移除 localStorage API Key
+- [ ] LLM 调用 trace 落 `.ai-director/llm-traces/` 便于复盘
+- [ ] 流式 SSE 输出（剧本编辑实时反馈）
 
 ---
 
