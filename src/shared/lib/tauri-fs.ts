@@ -14,8 +14,12 @@ import { PROJECT_SCHEMA_VERSION, type ProjectMeta } from '@/core/types/project';
  * Detect whether we're running inside the Tauri runtime. We check both the
  * official `isTauri()` predicate and the legacy `__TAURI_INTERNALS__` window
  * symbol because the predicate occasionally races on Next.js hydration.
+ *
+ * Exposed so UI can render different affordances (e.g. show "web preview"
+ * badge, gate folder-picker buttons) without having to know about the Tauri
+ * internals.
  */
-const isTauriEnv = (): boolean =>
+export const isTauriEnv = (): boolean =>
   isTauri() || (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window);
 
 /**

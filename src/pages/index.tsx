@@ -1,9 +1,22 @@
+// ──────────────────────────────────────────────────────────────────────────
+// Landing / entry hub — TE-language device front panel.
+//
+// Two device-card buttons (create / open), and a creation modal with four
+// project-meta fields. Style follows DESIGN_LANGUAGE.md (bone-white chassis,
+// inset key shadows, lowercase labels, 4px colored dot accents).
+// ──────────────────────────────────────────────────────────────────────────
+
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useScriptStore } from "@/store/scriptStore";
 import { useProjectStore } from "@/store/projectStore";
-import { pickAndLoadProject, scaffoldProject } from "@/shared/lib/tauri-fs";
+import {
+  isTauriEnv,
+  pickAndLoadProject,
+  scaffoldProject,
+} from "@/shared/lib/tauri-fs";
+import { Key, Panel, Divider } from "@/shared/ui/te";
 import {
   ASPECT_RATIO_OPTIONS,
   FORMAT_OPTIONS,
@@ -13,22 +26,33 @@ import {
   type ArtStylePreset,
   type ProjectFormat,
   type ProjectMeta,
-} from '@/core/types/project';
+} from "@/core/types/project";
 
 type ModalKind = "create" | null;
 
-const DEFAULT_FORMAT: ProjectFormat = 'series';
-const DEFAULT_ASPECT: AspectRatio = '16:9';
-const DEFAULT_STYLE: ArtStylePreset = 'photoreal';
+const DEFAULT_FORMAT: ProjectFormat = "series";
+const DEFAULT_ASPECT: AspectRatio = "16:9";
+const DEFAULT_STYLE: ArtStylePreset = "photoreal";
 
 export default function EntryHub() {
   const router = useRouter();
   const { setProjectContext } = useScriptStore();
-  const { setProject, meta: persistedMeta, rootPath: persistedRoot } = useProjectStore();
+  const {
+    setProject,
+    meta: persistedMeta,
+    rootPath: persistedRoot,
+  } = useProjectStore();
 
   const [modalKind, setModalKind] = useState<ModalKind>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [openHint, setOpenHint] = useState<string | null>(null);
+
+  // Detect runtime once on mount — drives the small mode badge in the header
+  // and shapes the "create" UX (real picker vs mock path).
+  const [tauri, setTauri] = useState(false);
+  useEffect(() => {
+    setTauri(isTauriEnv());
+  }, []);
 
   // Project creation form
   const [projectName, setProjectName] = useState("");
@@ -47,11 +71,9 @@ export default function EntryHub() {
 
   const handleConfirmCreate = async () => {
     if (!projectName.trim()) return;
-
     try {
       setIsLoading(true);
 
-      // 1. Build full ProjectMeta from form fields (Stage 0 lock-in)
       const meta: ProjectMeta = {
         ...createDefaultProjectMeta(projectName.trim()),
         format,
@@ -59,14 +81,12 @@ export default function EntryHub() {
         style: { preset: stylePreset, refImages: [] },
       };
 
-      // 2. Scaffold on disk (writes project.json) or fall back to mock
+      // Tauri: native picker → mkdir → write project.json. Web: mock path.
       const projectPath = await scaffoldProject(meta);
 
-      // 3. Sync both stores
       setProject(meta, projectPath);
       setProjectContext(projectName.trim(), projectPath); // legacy compat
 
-      // 4. Navigate to workspace
       router.push("/workspace");
     } catch (error) {
       console.error("Project initialization failed:", error);
@@ -76,44 +96,37 @@ export default function EntryHub() {
     }
   };
 
-  /**
-   * Open an existing project: pop the native directory picker, read its
-   * project.json, hydrate stores, navigate. Falls back to restoring the
-   * last persisted project when running in Web preview (no Tauri runtime).
-   */
+  /** Pop the directory picker, load project.json, hydrate stores, navigate. */
   const handleOpenProject = async () => {
     setOpenHint(null);
     try {
       setIsLoading(true);
       const result = await pickAndLoadProject();
-
       switch (result.kind) {
-        case 'ok':
+        case "ok":
           setProject(result.meta, result.rootPath);
           setProjectContext(result.meta.name, result.rootPath);
-          router.push('/workspace');
+          router.push("/workspace");
           return;
-
-        case 'canceled':
+        case "canceled":
           return;
-
-        case 'web-mock':
-          // Web preview can't talk to FS — restore the last project from
-          // the Zustand persist cache if there is one.
+        case "web-mock":
           if (persistedMeta && persistedRoot) {
             setProjectContext(persistedMeta.name, persistedRoot);
-            router.push('/workspace');
+            router.push("/workspace");
             return;
           }
-          setOpenHint('Web 预览模式无法访问真实文件系统。请在桌面端 (npm run tauri dev) 打开已有项目，或先创建一个新项目。');
+          setOpenHint(
+            "web preview cannot reach the local filesystem. launch the desktop build (npm run tauri dev) to open a real project, or create a new one first."
+          );
           return;
-
-        case 'no-meta':
-          setOpenHint(`选定目录下未找到 project.json — 请确认这是 AI 世纪导演创建的项目。\n路径：${result.rootPath}`);
+        case "no-meta":
+          setOpenHint(
+            `no project.json found in:\n${result.rootPath}\nthis folder doesn't look like an ai-director project.`
+          );
           return;
-
-        case 'error':
-          setOpenHint(`打开项目失败：${result.message}`);
+        case "error":
+          setOpenHint(`open failed · ${result.message}`);
           return;
       }
     } finally {
@@ -122,249 +135,343 @@ export default function EntryHub() {
   };
 
   return (
-    <main className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center p-8">
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-16"
-      >
-        <h1 className="text-5xl font-bold font-mono text-white mb-4">
-          <span className="text-[#FF5000]">AI</span> 世纪导演
-        </h1>
-        <p className="text-[#D1D5DB]/70 font-mono text-lg">
-          MULTIMODAL AI STORYBOARD SYNTHESIZER
+    <main className="min-h-screen bg-te-bone font-te text-te-charcoal">
+      {/* ── chassis header ────────────────────────────────────────────── */}
+      <header className="px-8 pt-6 pb-4 flex items-end justify-between border-b border-te-bone-edge/40">
+        <div className="flex items-center gap-3">
+          <span className="w-2 h-2 rounded-full bg-te-knob-orange shadow-[0_0_4px_rgba(232,134,42,0.8)]" />
+          <h1 className="text-[18px] font-semibold lowercase tracking-tight">
+            ai director · entry
+          </h1>
+          <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
+            project hub
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+          <span>
+            runtime ·{" "}
+            <span className={tauri ? "text-te-ok" : "text-te-charcoal/40"}>
+              {tauri ? "tauri desktop" : "web preview"}
+            </span>
+          </span>
+          <span className="text-te-charcoal/30">v0.2</span>
+        </div>
+      </header>
+
+      {/* ── hero panel ────────────────────────────────────────────────── */}
+      <section className="px-8 py-12 max-w-[1100px] mx-auto">
+        <div className="mb-10">
+          <p className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45 mb-2">
+            stage 0 · project
+          </p>
+          <h2 className="text-[28px] font-semibold lowercase tracking-tight leading-[1.1]">
+            spin up a new storyboard,
+            <br />
+            <span className="text-te-charcoal/55">or pick up where you left off.</span>
+          </h2>
+        </div>
+
+        {/* ── two device cards ──────────────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <DeviceCard
+            accent="orange"
+            label="create"
+            title="new project"
+            blurb="lock format · aspect · style — scaffolds a folder on disk."
+            disabled={isLoading}
+            onClick={openCreateModal}
+          />
+          <DeviceCard
+            accent="blue"
+            label="open"
+            title="existing project"
+            blurb={
+              tauri
+                ? "pick a folder — auto-reads project.json."
+                : "web preview restores the last persisted project."
+            }
+            disabled={isLoading}
+            onClick={handleOpenProject}
+            footer={
+              persistedMeta ? (
+                <span className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/50">
+                  last opened · {persistedMeta.name}
+                </span>
+              ) : null
+            }
+          />
+        </div>
+
+        {/* hint banner */}
+        {openHint && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 max-w-[720px] mx-auto px-4 py-3 rounded-md bg-te-knob-blue/10 border border-te-knob-blue/30 text-[11px] font-te-mono lowercase leading-relaxed text-te-charcoal/80 whitespace-pre-line"
+          >
+            {openHint}
+          </motion.div>
+        )}
+
+        <Divider className="mt-12 mb-6" />
+        <p className="text-[9px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/40 text-center">
+          stage 0 → stage 1 story → stage 1.5 bible → stage 2 keyframes → stage 3 motion
         </p>
-      </motion.div>
+      </section>
 
-      {/* Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-        {/* Create New Project Card */}
-        <motion.button
-          whileHover={{ scale: 1.03, boxShadow: "0 0 50px rgba(255, 80, 0, 0.3)" }}
-          whileTap={{ scale: 0.98 }}
-          onClick={openCreateModal}
-          disabled={isLoading}
-          className="h-[320px] bg-[#262626] border-2 border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-6 hover:border-[#FF5000]/50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <div className="w-24 h-24 bg-[#FF5000] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </div>
-          <div className="text-center">
-            <h3 className="text-white font-bold text-2xl font-mono mb-2">创建新项目</h3>
-            <p className="text-[#D1D5DB]/70 font-mono text-sm">
-              选择体裁、比例、风格 —— 在本地生成项目文件夹
-            </p>
-          </div>
-        </motion.button>
-
-        {/* Open Existing Project Card */}
-        <motion.button
-          whileHover={{ scale: 1.03, boxShadow: "0 0 50px rgba(0, 170, 255, 0.3)" }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleOpenProject}
-          disabled={isLoading}
-          className="h-[320px] bg-[#262626] border-2 border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-6 hover:border-[#00AAFF]/50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <div className="w-24 h-24 bg-[#00AAFF] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            {/* folder-open icon */}
-            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v1H3V7zm0 3h18l-1.5 8a2 2 0 01-2 1.7H6.5a2 2 0 01-2-1.7L3 10z" />
-            </svg>
-          </div>
-          <div className="text-center">
-            <h3 className="text-white font-bold text-2xl font-mono mb-2">打开已有项目</h3>
-            <p className="text-[#D1D5DB]/70 font-mono text-sm">
-              选择一个项目文件夹 —— 自动读取 project.json
-            </p>
-            {persistedMeta && (
-              <p className="text-[#00AAFF]/70 font-mono text-[10px] mt-3 truncate max-w-[260px] mx-auto">
-                上次打开 · {persistedMeta.name}
-              </p>
-            )}
-          </div>
-        </motion.button>
-      </div>
-
-      {/* Open-project hint banner (only shown after a failed open attempt) */}
-      {openHint && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-8 max-w-2xl px-6 py-4 rounded-xl bg-[#00AAFF]/10 border border-[#00AAFF]/30 text-[#D1D5DB] font-mono text-sm whitespace-pre-line"
-        >
-          {openHint}
-        </motion.div>
-      )}
-
-      {/* Project Initialization Modal */}
+      {/* ── creation modal ────────────────────────────────────────────── */}
       <AnimatePresence>
         {modalKind && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-te-charcoal/60 backdrop-blur-[2px]"
             onClick={() => !isLoading && setModalKind(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
+              initial={{ scale: 0.96, y: 8 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
+              exit={{ scale: 0.96, y: 8 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl bg-[#1A1A1A] border border-white/10 rounded-3xl shadow-2xl shadow-black/70 overflow-hidden flex flex-col max-h-[90vh]"
+              className="w-full max-w-[640px] max-h-[92vh] overflow-hidden flex flex-col"
             >
-              {/* Modal Header */}
-              <div className="border-b border-white/10 px-8 py-6 bg-[#262626] shrink-0">
-                <h2 className="text-white font-bold text-2xl font-mono">
-                  项目初始化
-                </h2>
-                <p className="text-[#D1D5DB]/70 font-mono text-sm mt-2">
-                  创建新项目
-                  <span className="text-[#FF5000]/80 ml-2">· 创建后无法修改</span>
-                </p>
-              </div>
-
-              {/* Modal Content (scrollable) */}
-              <div className="px-8 py-6 space-y-6 overflow-y-auto">
-                {/* Project Name */}
-                <div>
-                  <label className="block text-[#D1D5DB] text-xs font-semibold tracking-widest uppercase mb-3 font-mono">
-                    项目名称
-                  </label>
-                  <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="请输入项目名称..."
-                    className="w-full bg-[#262626] border border-white/10 rounded-xl p-4 text-white font-mono focus:outline-none focus:border-[#FF5000] transition-all"
-                    disabled={isLoading}
-                    autoFocus
-                  />
-                </div>
-
-                {/* Format */}
-                <div>
-                  <label className="block text-[#D1D5DB] text-xs font-semibold tracking-widest uppercase mb-3 font-mono">
-                    体裁 / format
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {FORMAT_OPTIONS.map((opt) => {
-                      const active = format === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setFormat(opt.value)}
-                          disabled={isLoading}
-                          className={`px-3 py-3 rounded-lg font-mono text-sm border transition-all ${
-                            active
-                              ? "bg-[#FF5000] border-[#FF5000] text-white"
-                              : "bg-[#262626] border-white/10 text-[#D1D5DB] hover:border-[#FF5000]/40"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Aspect Ratio */}
-                <div>
-                  <label className="block text-[#D1D5DB] text-xs font-semibold tracking-widest uppercase mb-3 font-mono">
-                    输出比例 / aspect ratio
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {ASPECT_RATIO_OPTIONS.map((opt) => {
-                      const active = aspectRatio === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setAspectRatio(opt.value)}
-                          disabled={isLoading}
-                          className={`px-3 py-3 rounded-lg font-mono text-xs border transition-all ${
-                            active
-                              ? "bg-[#00AAFF] border-[#00AAFF] text-white"
-                              : "bg-[#262626] border-white/10 text-[#D1D5DB] hover:border-[#00AAFF]/40"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Art Style Preset */}
-                <div>
-                  <label className="block text-[#D1D5DB] text-xs font-semibold tracking-widest uppercase mb-3 font-mono">
-                    美术风格 / style
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {STYLE_OPTIONS.map((opt) => {
-                      const active = stylePreset === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setStylePreset(opt.value)}
-                          disabled={isLoading}
-                          className={`px-3 py-3 rounded-lg font-mono text-sm border transition-all ${
-                            active
-                              ? "bg-white/15 border-white text-white"
-                              : "bg-[#262626] border-white/10 text-[#D1D5DB] hover:border-white/40"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[#D1D5DB]/40 font-mono text-xs mt-2">
-                    决定所有图像生成的画面调性。后续可在角色 Bible 阶段进一步定制。
-                  </p>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="border-t border-white/10 px-8 py-6 bg-[#262626] flex gap-4 shrink-0">
-                <button
-                  onClick={() => setModalKind(null)}
-                  disabled={isLoading}
-                  className="flex-1 bg-[#1A1A1A] border border-white/10 text-white rounded-xl py-4 font-mono text-sm transition-all hover:bg-white/5 disabled:opacity-50"
-                >
-                  取消
-                </button>
-                <motion.button
-                  whileHover={{ scale: isLoading ? 1 : 1.02 }}
-                  whileTap={{ scale: isLoading ? 1 : 0.98 }}
-                  onClick={handleConfirmCreate}
-                  disabled={isLoading || !projectName.trim()}
-                  className="flex-1 bg-[#FF5000] border border-white/20 text-white rounded-xl py-4 font-mono text-sm font-bold transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                      />
-                      处理中...
-                    </>
-                  ) : (
-                    "确认"
+              <Panel
+                title="new project · stage 0"
+                meta="lock-on-create"
+                className="flex flex-col overflow-hidden"
+              >
+                {/* form */}
+                <div className="flex flex-col gap-5 overflow-y-auto pr-1 max-h-[60vh]">
+                  {/* runtime hint banner — only matters when web previewing */}
+                  {!tauri && (
+                    <div className="px-3 py-2 rounded-md bg-te-warn/15 border border-te-warn/40 text-[10px] font-te-mono lowercase leading-relaxed text-te-charcoal/75">
+                      web preview · no native folder picker. project will use a
+                      mock path. launch <span className="font-semibold">npm run tauri dev</span>{" "}
+                      to scaffold real folders.
+                    </div>
                   )}
-                </motion.button>
-              </div>
+
+                  {/* project name */}
+                  <FormField label="project name" hint="lowercase, hyphens ok — also used as folder name">
+                    <input
+                      type="text"
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      placeholder="my-cyberpunk-pilot"
+                      autoFocus
+                      disabled={isLoading}
+                      className="te-input"
+                    />
+                  </FormField>
+
+                  {/* format */}
+                  <FormField label="format" accent="orange" hint="affects script length and episode breakdown">
+                    <KeyRow
+                      options={FORMAT_OPTIONS}
+                      value={format}
+                      onChange={(v) => setFormat(v)}
+                      disabled={isLoading}
+                    />
+                  </FormField>
+
+                  {/* aspect ratio */}
+                  <FormField label="aspect ratio" accent="blue" hint="all keyframes & video clips lock to this">
+                    <KeyRow
+                      options={ASPECT_RATIO_OPTIONS}
+                      value={aspectRatio}
+                      onChange={(v) => setAspectRatio(v)}
+                      disabled={isLoading}
+                    />
+                  </FormField>
+
+                  {/* art style */}
+                  <FormField label="art style" hint="injected into every t2i prompt — refine in stage 1.5">
+                    <KeyRow
+                      options={STYLE_OPTIONS}
+                      value={stylePreset}
+                      onChange={(v) => setStylePreset(v)}
+                      disabled={isLoading}
+                    />
+                  </FormField>
+                </div>
+
+                {/* footer */}
+                <div className="mt-5 pt-4 border-t border-te-bone-edge/40 flex items-center justify-between gap-3">
+                  <span className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40">
+                    {tauri ? "next: pick parent folder" : "next: mock scaffold"}
+                  </span>
+                  <div className="flex gap-2">
+                    <Key
+                      variant="wide"
+                      onClick={() => setModalKind(null)}
+                      disabled={isLoading}
+                    >
+                      cancel
+                    </Key>
+                    <Key
+                      variant="wide"
+                      active
+                      onClick={handleConfirmCreate}
+                      disabled={isLoading || !projectName.trim()}
+                    >
+                      {isLoading ? "scaffolding…" : "create"}
+                    </Key>
+                  </div>
+                </div>
+              </Panel>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* local utility classes — borrowed from agent-lab so the modal input
+          matches the rest of the app without adding to globals.css */}
+      <style jsx>{`
+        :global(.te-input) {
+          width: 100%;
+          background: #1f2418;
+          color: #b8c77a;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 12px;
+          padding: 10px 12px;
+          border-radius: 6px;
+          border: 1px solid rgba(0, 0, 0, 0.3);
+          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset, 0 0 12px rgba(0, 0, 0, 0.5) inset;
+          letter-spacing: 0.02em;
+          outline: none;
+        }
+        :global(.te-input::placeholder) {
+          color: #7a8a4a;
+        }
+        :global(.te-input:focus) {
+          box-shadow: 0 0 0 1px rgba(184, 199, 122, 0.5) inset, 0 0 12px rgba(0, 0, 0, 0.5) inset;
+        }
+      `}</style>
     </main>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Local presentational components — kept inline to avoid scope creep into
+// shared/ui until we have at least one more page that needs them.
+// ──────────────────────────────────────────────────────────────────────────
+
+interface DeviceCardProps {
+  accent: "orange" | "blue";
+  label: string;
+  title: string;
+  blurb: string;
+  disabled?: boolean;
+  onClick: () => void;
+  footer?: React.ReactNode;
+}
+
+function DeviceCard({
+  accent,
+  label,
+  title,
+  blurb,
+  disabled,
+  onClick,
+  footer,
+}: DeviceCardProps) {
+  const accentClass =
+    accent === "orange"
+      ? "bg-te-knob-orange shadow-[0_0_4px_rgba(232,134,42,0.8)]"
+      : "bg-te-knob-blue shadow-[0_0_4px_rgba(45,91,168,0.8)]";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`group relative text-left rounded-xl px-7 py-8 transition-[transform,box-shadow,background] duration-100
+        bg-te-bone-dim shadow-te-panel hover:bg-te-bone-deep
+        active:translate-y-[1px] active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.18)]
+        disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0`}
+    >
+      {/* category dot + label */}
+      <div className="flex items-center gap-2 mb-6">
+        <span className={`w-1.5 h-1.5 rounded-full ${accentClass}`} />
+        <span className="text-[9px] font-te-mono uppercase tracking-[0.22em] text-te-charcoal/55">
+          {label}
+        </span>
+      </div>
+
+      <h3 className="text-[22px] font-semibold lowercase tracking-tight leading-tight mb-3">
+        {title}
+      </h3>
+      <p className="text-[11px] font-te-mono lowercase leading-relaxed text-te-charcoal/65 max-w-[28ch]">
+        {blurb}
+      </p>
+
+      {footer && <div className="mt-6">{footer}</div>}
+
+      {/* hover indicator on right side */}
+      <span className="absolute top-7 right-7 text-[10px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/30 group-hover:text-te-charcoal/60 transition-colors">
+        ↵
+      </span>
+    </button>
+  );
+}
+
+interface FormFieldProps {
+  label: string;
+  hint?: string;
+  accent?: "orange" | "blue" | "red";
+  children: React.ReactNode;
+}
+
+function FormField({ label, hint, accent, children }: FormFieldProps) {
+  const accentClass =
+    accent === "orange"
+      ? "bg-te-knob-orange"
+      : accent === "blue"
+      ? "bg-te-knob-blue"
+      : accent === "red"
+      ? "bg-te-knob-red"
+      : "";
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        {accent && <span className={`w-1.5 h-1.5 rounded-full ${accentClass}`} />}
+        <label className="text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+          {label}
+        </label>
+      </div>
+      {children}
+      {hint && (
+        <div className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
+          {hint}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface KeyRowProps<T extends string> {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  disabled?: boolean;
+}
+
+function KeyRow<T extends string>({ options, value, onChange, disabled }: KeyRowProps<T>) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => (
+        <Key
+          key={opt.value}
+          variant="text"
+          active={value === opt.value}
+          disabled={disabled}
+          onClick={() => onChange(opt.value)}
+        >
+          {opt.label.toLowerCase()}
+        </Key>
+      ))}
+    </div>
   );
 }
