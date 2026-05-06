@@ -9,7 +9,12 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { PROJECT_SCHEMA_VERSION, type ProjectMeta } from '@/core/types/project';
-import { STORY_FILENAME } from '@/core/types/story';
+import {
+  SCRIPT_INDEX_FILENAME,
+  SCRIPT_INDEX_SCHEMA_VERSION,
+  STORY_FILENAME,
+  type ScriptIndex,
+} from '@/core/types/story';
 
 /**
  * Detect whether we're running inside the Tauri runtime. We check both the
@@ -199,6 +204,55 @@ export const writeStory = async (
   } catch (error) {
     console.error('[writeStory] failed:', error);
     return false;
+  }
+};
+
+/**
+ * Persist the episode boundary index to `<rootPath>/总剧本.index.json`.
+ * Web preview is no-op (returns false). Pretty-printed JSON for legibility
+ * — this file is small and humans may inspect it.
+ */
+export const writeScriptIndex = async (
+  rootPath: string,
+  index: ScriptIndex
+): Promise<boolean> => {
+  try {
+    if (!isTauriEnv()) {
+      console.warn('[Mock] Web preview: 总剧本.index.json not written to disk');
+      return false;
+    }
+    const path = await join(rootPath, SCRIPT_INDEX_FILENAME);
+    await writeTextFile(path, JSON.stringify(index, null, 2));
+    return true;
+  } catch (error) {
+    console.error('[writeScriptIndex] failed:', error);
+    return false;
+  }
+};
+
+/**
+ * Read & parse `<rootPath>/总剧本.index.json`. Returns null when missing
+ * (fresh project), unreadable, or schema-mismatched. Schema mismatch logs
+ * a warning so the caller can decide whether to migrate or refuse.
+ */
+export const loadScriptIndex = async (
+  rootPath: string
+): Promise<ScriptIndex | null> => {
+  try {
+    if (!isTauriEnv()) return null;
+    const path = await join(rootPath, SCRIPT_INDEX_FILENAME);
+    const content = await readTextFile(path);
+    const parsed = JSON.parse(content) as ScriptIndex;
+    if (parsed.schemaVersion !== SCRIPT_INDEX_SCHEMA_VERSION) {
+      console.warn(
+        `[loadScriptIndex] schema mismatch: file=${parsed.schemaVersion} expected=${SCRIPT_INDEX_SCHEMA_VERSION}`
+      );
+    }
+    return parsed;
+  } catch (error) {
+    // Missing index is the common case on fresh projects — warn-level only.
+    console.warn('[loadScriptIndex] not readable:', error);
+    return null;
   }
 };
 

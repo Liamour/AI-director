@@ -11,18 +11,37 @@
 // the draft in Zustand only.
 // ──────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useScriptStore } from '@/store/scriptStore';
 import { useProjectStore } from '@/store/projectStore';
-import { isTauriEnv, loadStory, writeStory } from '@/shared/lib/tauri-fs';
+import {
+  isTauriEnv,
+  loadScriptIndex,
+  loadStory,
+  writeScriptIndex,
+  writeStory,
+} from '@/shared/lib/tauri-fs';
 import { Key, Panel, Divider } from '@/shared/ui/te';
 import { LlmConfigDrawer } from '@/shared/ui/LlmConfigDrawer';
-import { countWords, extractTitle } from '@/core/types/story';
+import {
+  countWords,
+  extractTitle,
+  offsetToLine,
+  type EpisodeBoundary,
+  type ScriptIndex,
+} from '@/core/types/story';
 
 interface GenerateResponse {
   ok: boolean;
   content?: string;
+  error?: string;
+  durationMs?: number;
+}
+
+interface AnalyzeResponse {
+  ok: boolean;
+  index?: ScriptIndex;
   error?: string;
   durationMs?: number;
 }
@@ -42,25 +61,38 @@ export default function Stage1Page() {
   const [originalDraft, setOriginalDraft] = useState(''); // for revert
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Sprint 2.2 — episode boundary index
+  const [scriptIndex, setScriptIndex] = useState<ScriptIndex | null>(null);
+  /** Episode currently in focus (for chip highlight). Tracks textarea caret. */
+  const [activeEpisodeIdx, setActiveEpisodeIdx] = useState<number>(-1);
+
+  // textarea ref so chip clicks can scroll/move the caret
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // No project loaded → bounce to landing
   useEffect(() => {
     if (!projectMeta) router.replace('/');
   }, [projectMeta, router]);
 
-  // Hydrate draft from disk on mount (Tauri only — web mode starts empty)
+  // Hydrate draft + index from disk on mount (Tauri only — web starts empty)
   useEffect(() => {
     if (!projectRoot) return;
     let cancel = false;
     (async () => {
-      const content = await loadStory(projectRoot);
+      const [content, index] = await Promise.all([
+        loadStory(projectRoot),
+        loadScriptIndex(projectRoot),
+      ]);
       if (cancel) return;
       if (content) {
         setDraft(content);
         setOriginalDraft(content);
       }
+      if (index) setScriptIndex(index);
     })();
     return () => {
       cancel = true;
@@ -100,6 +132,8 @@ export default function Stage1Page() {
         return;
       }
       setDraft(json.content);
+      // New content invalidates any prior episode split — make user re-analyze.
+      setScriptIndex(null);
       // Note: not setting originalDraft — generated content is not yet "saved"
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -112,8 +146,14 @@ export default function Stage1Page() {
     if (!projectRoot) return;
     setIsSaving(true);
     try {
-      const ok = await writeStory(projectRoot, draft);
-      if (!ok && tauri) {
+      // Save story; if we have an index, save that too.
+      const [storyOk, indexOk] = await Promise.all([
+        writeStory(projectRoot, draft),
+        scriptIndex
+          ? writeScriptIndex(projectRoot, scriptIndex)
+          : Promise.resolve(true),
+      ]);
+      if ((!storyOk || !indexOk) && tauri) {
         setError('保存到磁盘失败 · 看 dev server log');
         return;
       }
@@ -127,6 +167,68 @@ export default function Stage1Page() {
 
   const handleRevert = () => {
     setDraft(originalDraft);
+  };
+
+  /** Ask LLM to propose episode boundaries for the current draft. */
+  const handleAnalyzeEpisodes = async () => {
+    if (!apiReady || !draft.trim() || isAnalyzing) return;
+    setError(null);
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/stage1/analyze-episodes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: draft,
+          project: { format: projectMeta.format },
+          apiKey,
+          baseUrl,
+          modelId: customModelId,
+        }),
+      });
+      const json = (await res.json()) as AnalyzeResponse;
+      if (!json.ok || !json.index) {
+        setError(json.error ?? 'analyze failed');
+        return;
+      }
+      setScriptIndex(json.index);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  /**
+   * Move the textarea caret to a character offset and scroll that line into
+   * view. Browsers don't have a native "scroll to selection" for textarea,
+   * so we estimate via line-count × line-height. Good enough for jumping
+   * between episodes; no need for sub-pixel accuracy.
+   */
+  const scrollToOffset = (offset: number) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.focus();
+    ta.setSelectionRange(offset, offset);
+    const lineNum = offsetToLine(ta.value, offset) - 1;
+    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 24;
+    // Scroll so the target line appears about 1/4 down the visible area
+    const target = Math.max(0, lineNum * lineHeight - ta.clientHeight * 0.25);
+    ta.scrollTop = target;
+  };
+
+  /** When user types in the editor, recompute which episode the caret is in. */
+  const refreshActiveEpisode = (caretOffset: number) => {
+    if (!scriptIndex || scriptIndex.episodes.length === 0) {
+      setActiveEpisodeIdx(-1);
+      return;
+    }
+    let idx = -1;
+    for (let i = 0; i < scriptIndex.episodes.length; i++) {
+      if (scriptIndex.episodes[i].offset <= caretOffset) idx = i;
+      else break;
+    }
+    setActiveEpisodeIdx(idx);
   };
 
   // ── derived ──────────────────────────────────────────────────────────
@@ -235,9 +337,40 @@ export default function Stage1Page() {
                 </span>
               </div>
 
+              {/* ── episode chips ──────────────────────────────────── */}
+              <EpisodeChips
+                index={scriptIndex}
+                contentLength={draft.length}
+                draftContent={draft}
+                activeIdx={activeEpisodeIdx}
+                isAnalyzing={isAnalyzing}
+                canAnalyze={apiReady && !isGenerating}
+                onAnalyze={handleAnalyzeEpisodes}
+                onJumpToEpisode={(ep, idx) => {
+                  setActiveEpisodeIdx(idx);
+                  scrollToOffset(ep.offset);
+                }}
+              />
+
               <textarea
+                ref={textareaRef}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
+                onSelect={(e) =>
+                  refreshActiveEpisode(
+                    (e.target as HTMLTextAreaElement).selectionStart
+                  )
+                }
+                onKeyUp={(e) =>
+                  refreshActiveEpisode(
+                    (e.target as HTMLTextAreaElement).selectionStart
+                  )
+                }
+                onClick={(e) =>
+                  refreshActiveEpisode(
+                    (e.target as HTMLTextAreaElement).selectionStart
+                  )
+                }
                 spellCheck={false}
                 rows={28}
                 className="te-input resize-y leading-relaxed"
@@ -305,7 +438,7 @@ export default function Stage1Page() {
           background: #1f2418;
           color: #b8c77a;
           font-family: 'JetBrains Mono', ui-monospace, monospace;
-          font-size: 12px;
+          font-size: 14px;
           padding: 12px 14px;
           border-radius: 6px;
           border: 1px solid rgba(0, 0, 0, 0.3);
@@ -322,5 +455,117 @@ export default function Stage1Page() {
         }
       `}</style>
     </main>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// EpisodeChips — horizontal strip above the editor.
+//
+// Renders one chip per episode, with click-to-jump. Also doubles as the
+// "analyze" launcher when no index exists yet, and surfaces a "stale"
+// warning when the script has changed since the last analyze.
+// ──────────────────────────────────────────────────────────────────────────
+
+interface EpisodeChipsProps {
+  index: ScriptIndex | null;
+  contentLength: number;
+  draftContent: string;
+  activeIdx: number;
+  isAnalyzing: boolean;
+  canAnalyze: boolean;
+  onAnalyze: () => void;
+  onJumpToEpisode: (ep: EpisodeBoundary, idx: number) => void;
+}
+
+function EpisodeChips({
+  index,
+  contentLength,
+  draftContent,
+  activeIdx,
+  isAnalyzing,
+  canAnalyze,
+  onAnalyze,
+  onJumpToEpisode,
+}: EpisodeChipsProps) {
+  const empty = !index || index.episodes.length === 0;
+  const stale =
+    index &&
+    Math.abs(index.analyzedContentLength - contentLength) >
+      Math.max(20, contentLength * 0.05);
+
+  return (
+    <div className="flex flex-col gap-2 px-3 py-3 rounded-md bg-te-bone-deep/60 border border-te-bone-edge/40">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-te-knob-blue" />
+          episodes {index ? `· ${index.episodes.length}` : ''}
+          {stale && (
+            <span className="ml-2 text-te-warn normal-case tracking-tight">
+              · stale (剧本已改，建议重抽)
+            </span>
+          )}
+        </span>
+        <button
+          type="button"
+          onClick={onAnalyze}
+          disabled={!canAnalyze || isAnalyzing}
+          className="flex items-center gap-1.5 h-7 px-2.5 rounded-md
+            bg-te-bone-dim text-te-charcoal/80 shadow-te-key
+            hover:bg-te-bone-deep hover:text-te-charcoal
+            active:translate-y-[1px] active:shadow-te-key-active
+            disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0
+            text-[11px] font-te-mono uppercase tracking-[0.18em] transition-colors"
+          title={canAnalyze ? 'ai 自动分集' : 'configure llm first'}
+        >
+          <span className="text-te-charcoal/40">[</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-te-knob-orange" />
+          {isAnalyzing ? 'splitting…' : empty ? 'analyze' : 're-analyze'}
+          <span className="text-te-charcoal/40">]</span>
+        </button>
+      </div>
+
+      {empty ? (
+        <p className="text-[12px] font-te-mono lowercase text-te-charcoal/45 italic">
+          no episodes yet · click [analyze] to ask the llm to propose cut points
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {index!.episodes.map((ep, i) => {
+            const isActive = i === activeIdx;
+            const lineNum = offsetToLine(draftContent, ep.offset);
+            return (
+              <button
+                key={ep.id}
+                type="button"
+                onClick={() => onJumpToEpisode(ep, i)}
+                title={ep.reason ?? `${ep.title} · line ${lineNum}`}
+                className={`flex items-center gap-2 h-8 pl-2 pr-3 rounded-md transition-colors text-[12px] font-te-mono lowercase tracking-tight
+                  ${
+                    isActive
+                      ? 'bg-te-charcoal text-te-bone shadow-te-key-active'
+                      : 'bg-te-bone-dim text-te-charcoal/85 shadow-te-key hover:bg-te-bone-deep'
+                  }`}
+              >
+                <span
+                  className={`text-[10px] font-te-mono uppercase tracking-[0.15em] ${
+                    isActive ? 'text-te-bone/70' : 'text-te-charcoal/45'
+                  }`}
+                >
+                  ep{String(i + 1).padStart(2, '0')}
+                </span>
+                <span className="truncate max-w-[180px]">{ep.title}</span>
+                <span
+                  className={`text-[10px] font-te-mono ${
+                    isActive ? 'text-te-bone/50' : 'text-te-charcoal/35'
+                  }`}
+                >
+                  ·l{lineNum}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

@@ -62,19 +62,28 @@ export function LlmConfigDrawer() {
 
   return (
     <>
-      {/* trigger button */}
+      {/* trigger — TE key affordance + literal brackets so it reads as
+          a clickable control, not just header text */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[12px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/65 hover:text-te-charcoal hover:bg-te-bone-dim transition-colors"
         title="llm backbone config"
+        className="flex items-center gap-1.5 h-8 px-3 rounded-md
+          bg-te-bone-dim text-te-charcoal/80 shadow-te-key
+          hover:bg-te-bone-deep hover:text-te-charcoal
+          active:translate-y-[1px] active:shadow-te-key-active
+          text-[12px] font-te-mono uppercase tracking-[0.18em] transition-colors"
       >
+        <span className="text-te-charcoal/40 leading-none">[</span>
         <span
           className={`w-1.5 h-1.5 rounded-full ${
-            apiReady ? 'bg-te-ok shadow-[0_0_4px_rgba(127,176,105,0.8)]' : 'bg-te-warn'
+            apiReady
+              ? 'bg-te-ok shadow-[0_0_4px_rgba(127,176,105,0.8)]'
+              : 'bg-te-warn shadow-[0_0_4px_rgba(252,191,73,0.8)]'
           }`}
         />
-        config
+        <span>config</span>
+        <span className="text-te-charcoal/40 leading-none">]</span>
       </button>
 
       <AnimatePresence>
