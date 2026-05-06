@@ -101,8 +101,15 @@ export async function renderViaComfy(
 
   if (!submitRes.ok) {
     const text = await safeText(submitRes);
+    // eslint-disable-next-line no-console
+    console.error(
+      `[comfyClient] /prompt http ${submitRes.status}`,
+      '\n  url        :', `${baseUrl}/prompt`,
+      '\n  checkpoint :', config.checkpoint,
+      '\n  body       :', text,
+    );
     throw new Error(
-      `comfy submit http ${submitRes.status} → ${baseUrl}/prompt · ${text.slice(0, 240)}`
+      `comfy submit http ${submitRes.status} → ${baseUrl}/prompt · ${text.slice(0, 600)}`
     );
   }
 

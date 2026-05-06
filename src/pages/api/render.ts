@@ -129,9 +129,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       durationMs: Date.now() - t0,
     });
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    // eslint-disable-next-line no-console
+    console.error(
+      `[api/render] ${backend.kind} backend failed after ${Date.now() - t0}ms`,
+      '\n  prompt   :', (body.prompt ?? '').slice(0, 120),
+      '\n  aspect   :', body.aspectRatio,
+      '\n  config   :', backend.kind === 'comfyui'
+        ? { url: backend.url, checkpoint: backend.checkpoint }
+        : { baseUrl: backend.baseUrl, modelId: backend.modelId },
+      '\n  error    :', errMsg
+    );
     return res.status(502).json({
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: errMsg,
       backend: backend.kind,
       durationMs: Date.now() - t0,
     });
