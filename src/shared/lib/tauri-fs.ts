@@ -82,6 +82,49 @@ export const scaffoldProject = async (meta: ProjectMeta): Promise<string> => {
 };
 
 /**
+ * Result of `pickAndLoadProject` — discriminated so callers can render
+ * different UX for each failure mode (canceled / wrong folder / web mode).
+ */
+export type OpenProjectResult =
+  /** Success — meta loaded from project.json. */
+  | { kind: 'ok'; meta: ProjectMeta; rootPath: string }
+  /** User dismissed the directory picker. No-op for the caller. */
+  | { kind: 'canceled' }
+  /** Running in browser (no Tauri). Caller should fall back to last persisted project or show a message. */
+  | { kind: 'web-mock' }
+  /** A folder was picked but it has no readable project.json. */
+  | { kind: 'no-meta'; rootPath: string }
+  /** Something else went wrong (FS error, JSON parse fail, etc). */
+  | { kind: 'error'; message: string };
+
+/**
+ * Pop the native directory picker and load that folder's project.json.
+ * Use this for the "open existing project" flow on the landing page.
+ */
+export const pickAndLoadProject = async (): Promise<OpenProjectResult> => {
+  try {
+    if (!isTauriEnv()) {
+      console.warn('[Mock] Web preview: pickAndLoadProject requires Tauri desktop');
+      return { kind: 'web-mock' };
+    }
+    const selectedPath = await open({
+      directory: true,
+      multiple: false,
+      title: '选择已有项目根目录',
+    });
+    if (!selectedPath) return { kind: 'canceled' };
+    const rootPath = Array.isArray(selectedPath) ? selectedPath[0] : selectedPath;
+    const meta = await loadProjectMeta(rootPath);
+    if (!meta) return { kind: 'no-meta', rootPath };
+    return { kind: 'ok', meta, rootPath };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[pickAndLoadProject] failed:', error);
+    return { kind: 'error', message };
+  }
+};
+
+/**
  * Read & parse `<rootPath>/project.json`. Returns null when the file is
  * missing, unreadable, or its schemaVersion doesn't match. Schema mismatch
  * logs a warning so the caller can decide whether to migrate or refuse.
