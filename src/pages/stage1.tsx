@@ -351,6 +351,8 @@ export default function Stage1Page() {
               onChange={(e) => setIdea(e.target.value)}
               placeholder="一句话灵感 · 比如「一个失忆的赛博朋克侦探追查偷走自己记忆的黑客」"
               spellCheck={false}
+              data-gramm="false"
+              data-gramm_editor="false"
               rows={2}
               className="te-input resize-none"
               disabled={isGenerating}
@@ -471,40 +473,42 @@ interface EpisodeCardProps {
 
 function EpisodeCard({ episode, active, onClick, onDelete }: EpisodeCardProps) {
   const wc = countWords(episode.content);
+  // Match te-input border treatment so the sidebar and editor read as the
+  // same visual language (hard 1px border, no shadow).
   return (
     <div
-      className={`relative group rounded-md cursor-pointer transition-colors
+      className={`relative group rounded cursor-pointer transition-colors border
         ${
           active
-            ? 'bg-te-charcoal text-te-bone shadow-te-key-active'
-            : 'bg-te-bone-dim text-te-charcoal shadow-te-key hover:bg-te-bone-deep'
+            ? 'bg-te-charcoal text-te-bone border-te-charcoal'
+            : 'bg-[#FDFCF7] text-te-charcoal border-te-charcoal hover:bg-te-bone-dim'
         }`}
       onClick={onClick}
     >
       <div className="flex items-baseline gap-2 px-3 pt-2.5">
         <span
-          className={`text-[10px] font-te-mono uppercase tracking-[0.18em] ${
-            active ? 'text-te-bone/60' : 'text-te-charcoal/45'
+          className={`text-[11px] uppercase tracking-[0.18em] ${
+            active ? 'text-te-bone/60' : 'text-te-charcoal/55'
           }`}
         >
           ep{String(episode.number).padStart(2, '0')}
         </span>
-        <span className="text-[13px] font-semibold leading-snug truncate">
+        <span className="text-[14px] font-semibold leading-snug truncate">
           {episode.title || '(untitled)'}
         </span>
       </div>
       {episode.logline && (
         <p
-          className={`px-3 pt-1 text-[11px] leading-snug line-clamp-2 ${
-            active ? 'text-te-bone/65' : 'text-te-charcoal/55'
+          className={`px-3 pt-1 text-[12px] leading-snug line-clamp-2 ${
+            active ? 'text-te-bone/65' : 'text-te-charcoal/65'
           }`}
         >
           {episode.logline}
         </p>
       )}
       <div
-        className={`px-3 pb-2 pt-1 text-[10px] font-te-mono uppercase tracking-[0.15em] ${
-          active ? 'text-te-bone/40' : 'text-te-charcoal/35'
+        className={`px-3 pb-2 pt-1 text-[10px] uppercase tracking-[0.15em] ${
+          active ? 'text-te-bone/40' : 'text-te-charcoal/40'
         }`}
       >
         {wc} words
@@ -568,8 +572,10 @@ function EpisodeEditor({
         onChange={(e) => onLoglineChange(e.target.value)}
         placeholder="logline · one-or-two-sentence hook (optional)"
         className="te-input"
-        style={{ fontSize: '13px', padding: '10px 12px' }}
+        style={{ fontSize: '14px', padding: '10px 12px' }}
         spellCheck={false}
+        data-gramm="false"
+        data-gramm_editor="false"
       />
 
       {/* prose body */}
@@ -579,6 +585,8 @@ function EpisodeEditor({
         placeholder="episode prose · markdown supported"
         rows={20}
         spellCheck={false}
+        data-gramm="false"
+        data-gramm_editor="false"
         className="te-input resize-y leading-relaxed"
         style={{ minHeight: '360px' }}
       />
