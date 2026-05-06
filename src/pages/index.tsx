@@ -87,7 +87,7 @@ export default function EntryHub() {
       setProject(meta, projectPath);
       setProjectContext(projectName.trim(), projectPath); // legacy compat
 
-      router.push("/workspace");
+      router.push("/stage1");
     } catch (error) {
       console.error("Project initialization failed:", error);
     } finally {
@@ -106,14 +106,14 @@ export default function EntryHub() {
         case "ok":
           setProject(result.meta, result.rootPath);
           setProjectContext(result.meta.name, result.rootPath);
-          router.push("/workspace");
+          router.push("/stage1");
           return;
         case "canceled":
           return;
         case "web-mock":
           if (persistedMeta && persistedRoot) {
             setProjectContext(persistedMeta.name, persistedRoot);
-            router.push("/workspace");
+            router.push("/stage1");
             return;
           }
           setOpenHint(

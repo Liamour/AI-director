@@ -9,6 +9,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { PROJECT_SCHEMA_VERSION, type ProjectMeta } from '@/core/types/project';
+import { STORY_FILENAME } from '@/core/types/story';
 
 /**
  * Detect whether we're running inside the Tauri runtime. We check both the
@@ -173,6 +174,47 @@ export const writeProjectMeta = async (
   } catch (error) {
     console.error('[writeProjectMeta] failed:', error);
     return false;
+  }
+};
+
+// ── Stage 1 story FS helpers ─────────────────────────────────────────────
+
+/**
+ * Persist the markdown prose script to `<rootPath>/总剧本.md`. In web
+ * preview mode this is a no-op (returns false) — caller should treat
+ * Zustand state as the only source of truth.
+ */
+export const writeStory = async (
+  rootPath: string,
+  content: string
+): Promise<boolean> => {
+  try {
+    if (!isTauriEnv()) {
+      console.warn('[Mock] Web preview: 总剧本.md not written to disk');
+      return false;
+    }
+    const path = await join(rootPath, STORY_FILENAME);
+    await writeTextFile(path, content);
+    return true;
+  } catch (error) {
+    console.error('[writeStory] failed:', error);
+    return false;
+  }
+};
+
+/**
+ * Read `<rootPath>/总剧本.md`. Returns null when the file doesn't exist
+ * (fresh project) or when running in web preview.
+ */
+export const loadStory = async (rootPath: string): Promise<string | null> => {
+  try {
+    if (!isTauriEnv()) return null;
+    const path = await join(rootPath, STORY_FILENAME);
+    return await readTextFile(path);
+  } catch (error) {
+    // ENOENT is expected on fresh projects — log only at warn level
+    console.warn('[loadStory] not readable:', error);
+    return null;
   }
 };
 
