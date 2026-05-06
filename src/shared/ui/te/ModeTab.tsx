@@ -16,13 +16,13 @@ export function ModeTab({ index, label, active, onClick }: ModeTabProps) {
           : 'bg-te-bone-dim text-te-charcoal shadow-te-key hover:bg-te-bone-deep active:translate-y-[1px]'}`}
     >
       <span
-        className={`text-[8px] font-te-mono tracking-widest ${
+        className={`text-[10px] font-te-mono tracking-widest ${
           active ? 'text-te-knob-orange' : 'text-te-charcoal/40'
         }`}
       >
         T{index}
       </span>
-      <span className="text-[10px] font-te lowercase leading-none">{label}</span>
+      <span className="text-[12px] font-te lowercase leading-none">{label}</span>
     </button>
   );
 }

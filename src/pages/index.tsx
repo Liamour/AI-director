@@ -17,6 +17,7 @@ import {
   scaffoldProject,
 } from "@/shared/lib/tauri-fs";
 import { Key, Panel, Divider } from "@/shared/ui/te";
+import { LlmConfigDrawer } from "@/shared/ui/LlmConfigDrawer";
 import {
   ASPECT_RATIO_OPTIONS,
   FORMAT_OPTIONS,
@@ -140,14 +141,15 @@ export default function EntryHub() {
       <header className="px-8 pt-6 pb-4 flex items-end justify-between border-b border-te-bone-edge/40">
         <div className="flex items-center gap-3">
           <span className="w-2 h-2 rounded-full bg-te-knob-orange shadow-[0_0_4px_rgba(232,134,42,0.8)]" />
-          <h1 className="text-[18px] font-semibold lowercase tracking-tight">
+          <h1 className="text-[22px] font-semibold lowercase tracking-tight">
             ai director · entry
           </h1>
-          <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
+          <span className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
             project hub
           </span>
         </div>
-        <div className="flex items-center gap-4 text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+        <div className="flex items-center gap-4 text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+          <LlmConfigDrawer />
           <span>
             runtime ·{" "}
             <span className={tauri ? "text-te-ok" : "text-te-charcoal/40"}>
@@ -161,10 +163,10 @@ export default function EntryHub() {
       {/* ── hero panel ────────────────────────────────────────────────── */}
       <section className="px-8 py-12 max-w-[1100px] mx-auto">
         <div className="mb-10">
-          <p className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45 mb-2">
+          <p className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45 mb-2">
             stage 0 · project
           </p>
-          <h2 className="text-[28px] font-semibold lowercase tracking-tight leading-[1.1]">
+          <h2 className="text-[32px] font-semibold lowercase tracking-tight leading-[1.1]">
             spin up a new storyboard,
             <br />
             <span className="text-te-charcoal/55">or pick up where you left off.</span>
@@ -194,7 +196,7 @@ export default function EntryHub() {
             onClick={handleOpenProject}
             footer={
               persistedMeta ? (
-                <span className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/50">
+                <span className="text-[11px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/50">
                   last opened · {persistedMeta.name}
                 </span>
               ) : null
@@ -207,14 +209,14 @@ export default function EntryHub() {
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-6 max-w-[720px] mx-auto px-4 py-3 rounded-md bg-te-knob-blue/10 border border-te-knob-blue/30 text-[11px] font-te-mono lowercase leading-relaxed text-te-charcoal/80 whitespace-pre-line"
+            className="mt-6 max-w-[720px] mx-auto px-4 py-3 rounded-md bg-te-knob-blue/10 border border-te-knob-blue/30 text-[13px] font-te-mono lowercase leading-relaxed text-te-charcoal/80 whitespace-pre-line"
           >
             {openHint}
           </motion.div>
         )}
 
         <Divider className="mt-12 mb-6" />
-        <p className="text-[9px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/40 text-center">
+        <p className="text-[11px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/40 text-center">
           stage 0 → stage 1 story → stage 1.5 bible → stage 2 keyframes → stage 3 motion
         </p>
       </section>
@@ -245,7 +247,7 @@ export default function EntryHub() {
                 <div className="flex flex-col gap-5 overflow-y-auto pr-1 max-h-[60vh]">
                   {/* runtime hint banner — only matters when web previewing */}
                   {!tauri && (
-                    <div className="px-3 py-2 rounded-md bg-te-warn/15 border border-te-warn/40 text-[10px] font-te-mono lowercase leading-relaxed text-te-charcoal/75">
+                    <div className="px-3 py-2 rounded-md bg-te-warn/15 border border-te-warn/40 text-[12px] font-te-mono lowercase leading-relaxed text-te-charcoal/75">
                       web preview · no native folder picker. project will use a
                       mock path. launch <span className="font-semibold">npm run tauri dev</span>{" "}
                       to scaffold real folders.
@@ -298,7 +300,7 @@ export default function EntryHub() {
 
                 {/* footer */}
                 <div className="mt-5 pt-4 border-t border-te-bone-edge/40 flex items-center justify-between gap-3">
-                  <span className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40">
+                  <span className="text-[11px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40">
                     {tauri ? "next: pick parent folder" : "next: mock scaffold"}
                   </span>
                   <div className="flex gap-2">
@@ -394,22 +396,22 @@ function DeviceCard({
       {/* category dot + label */}
       <div className="flex items-center gap-2 mb-6">
         <span className={`w-1.5 h-1.5 rounded-full ${accentClass}`} />
-        <span className="text-[9px] font-te-mono uppercase tracking-[0.22em] text-te-charcoal/55">
+        <span className="text-[11px] font-te-mono uppercase tracking-[0.22em] text-te-charcoal/55">
           {label}
         </span>
       </div>
 
-      <h3 className="text-[22px] font-semibold lowercase tracking-tight leading-tight mb-3">
+      <h3 className="text-[26px] font-semibold lowercase tracking-tight leading-tight mb-3">
         {title}
       </h3>
-      <p className="text-[11px] font-te-mono lowercase leading-relaxed text-te-charcoal/65 max-w-[28ch]">
+      <p className="text-[13px] font-te-mono lowercase leading-relaxed text-te-charcoal/65 max-w-[28ch]">
         {blurb}
       </p>
 
       {footer && <div className="mt-6">{footer}</div>}
 
       {/* hover indicator on right side */}
-      <span className="absolute top-7 right-7 text-[10px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/30 group-hover:text-te-charcoal/60 transition-colors">
+      <span className="absolute top-7 right-7 text-[12px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/30 group-hover:text-te-charcoal/60 transition-colors">
         ↵
       </span>
     </button>
@@ -437,13 +439,13 @@ function FormField({ label, hint, accent, children }: FormFieldProps) {
     <div>
       <div className="flex items-center gap-2 mb-2">
         {accent && <span className={`w-1.5 h-1.5 rounded-full ${accentClass}`} />}
-        <label className="text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+        <label className="text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
           {label}
         </label>
       </div>
       {children}
       {hint && (
-        <div className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
+        <div className="text-[11px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
           {hint}
         </div>
       )}

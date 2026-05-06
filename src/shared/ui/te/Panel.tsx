@@ -27,11 +27,11 @@ export function Panel({
     >
       {(title || meta) && (
         <header className="flex items-center justify-between px-4 py-2 border-b border-te-bone-edge/40">
-          <span className="text-[9px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/65">
+          <span className="text-[11px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/65">
             {title}
           </span>
           {meta && (
-            <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-charcoal/40">
+            <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-charcoal/40">
               {meta}
             </span>
           )}

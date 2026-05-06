@@ -158,13 +158,13 @@ export function Knob({
               aria-hidden
             />
           )}
-          <span className="text-[9px] font-te-mono uppercase tracking-[0.15em] text-te-charcoal/70">
+          <span className="text-[11px] font-te-mono uppercase tracking-[0.15em] text-te-charcoal/70">
             {label}
           </span>
         </div>
       )}
       {sublabel && (
-        <div className="text-[9px] font-te-mono lowercase text-te-charcoal/50">
+        <div className="text-[11px] font-te-mono lowercase text-te-charcoal/50">
           {sublabel}
         </div>
       )}

@@ -219,14 +219,14 @@ export default function AgentLab() {
       <header className="px-8 pt-6 pb-4 flex items-end justify-between border-b border-te-bone-edge/40">
         <div className="flex items-center gap-3">
           <span className={statusDotClass(status)} />
-          <h1 className="text-[18px] font-semibold lowercase tracking-tight">
+          <h1 className="text-[22px] font-semibold lowercase tracking-tight">
             ai director · agent lab
           </h1>
-          <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
+          <span className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
             multi-agent runtime
           </span>
         </div>
-        <div className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+        <div className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
           status · {status}
         </div>
       </header>
@@ -239,7 +239,7 @@ export default function AgentLab() {
               {/* ── connection ──────────────────────────────────────── */}
               <div className="flex flex-col gap-3 pb-4 border-b border-te-bone-edge/40">
                 <div>
-                  <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                  <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                     preset{' '}
                     {activePresetIndex === -1 && (
                       <span className="text-te-charcoal/35 normal-case tracking-normal">· custom</span>
@@ -260,7 +260,7 @@ export default function AgentLab() {
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                  <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                     base url
                   </label>
                   <input
@@ -272,13 +272,13 @@ export default function AgentLab() {
                     autoComplete="off"
                     className="te-input"
                   />
-                  <div className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
+                  <div className="text-[11px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
                     sdk base (…/v1) or full path (…/v1/chat/completions) — both work
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                  <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                     model id <span className="text-te-charcoal/35 normal-case tracking-normal">· chat</span>
                   </label>
                   <input
@@ -293,7 +293,7 @@ export default function AgentLab() {
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                  <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                     api key
                   </label>
                   <input
@@ -310,7 +310,7 @@ export default function AgentLab() {
               {/* ── render backend ──────────────────────────────────── */}
               <div className="flex flex-col gap-3 pb-4 border-b border-te-bone-edge/40">
                 <div>
-                  <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                  <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                     render backend
                   </label>
                   <div className="flex flex-wrap gap-1.5">
@@ -333,7 +333,7 @@ export default function AgentLab() {
 
                 {renderBackend === 'cloud' ? (
                   <div>
-                    <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                    <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                       image model id
                     </label>
                     <input
@@ -345,14 +345,14 @@ export default function AgentLab() {
                       autoComplete="off"
                       className="te-input"
                     />
-                    <div className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
+                    <div className="text-[11px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
                       empty = skip rendering · reuses chat base url + api key
                     </div>
                   </div>
                 ) : (
                   <>
                     <div>
-                      <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                      <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                         comfy url
                       </label>
                       <input
@@ -366,7 +366,7 @@ export default function AgentLab() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                      <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                         checkpoint
                       </label>
                       <input
@@ -378,7 +378,7 @@ export default function AgentLab() {
                         autoComplete="off"
                         className="te-input"
                       />
-                      <div className="text-[9px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
+                      <div className="text-[11px] font-te-mono lowercase tracking-[0.12em] text-te-charcoal/40 mt-1.5">
                         filename inside ComfyUI/models/checkpoints/ · flux schnell = 4 steps, ~6gb vram
                       </div>
                     </div>
@@ -388,7 +388,7 @@ export default function AgentLab() {
 
               {/* ── prompt ──────────────────────────────────────────── */}
               <div>
-                <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                   idea
                 </label>
                 <div className="rounded-md bg-te-charcoal shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] p-3">
@@ -397,7 +397,7 @@ export default function AgentLab() {
                     onChange={(e) => setIdea(e.target.value)}
                     disabled={status === 'running'}
                     placeholder="describe a scene · style · vibe..."
-                    className="w-full min-h-[120px] bg-transparent border-none outline-none resize-vertical text-te-lcd-fg font-lcd text-[15px] leading-tight placeholder:text-te-lcd-dim/60 disabled:opacity-50"
+                    className="w-full min-h-[120px] bg-transparent border-none outline-none resize-vertical text-te-lcd-fg font-lcd text-[17px] leading-tight placeholder:text-te-lcd-dim/60 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -410,7 +410,7 @@ export default function AgentLab() {
                   onChange={setShotLimit}
                   color="orange"
                 />
-                <div className="flex-1 text-[10px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55 leading-relaxed">
+                <div className="flex-1 text-[12px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55 leading-relaxed">
                   cinematographer shot limit · how many shots to generate image prompts for
                 </div>
               </div>
@@ -418,7 +418,7 @@ export default function AgentLab() {
               <button
                 onClick={run}
                 disabled={!canRun}
-                className={`w-full h-12 rounded-md lowercase text-[12px] tracking-[0.18em] transition-all flex items-center justify-center gap-2 select-none
+                className={`w-full h-12 rounded-md lowercase text-[14px] tracking-[0.18em] transition-all flex items-center justify-center gap-2 select-none
                   ${!canRun
                     ? 'bg-te-bone-dim text-te-charcoal/35 cursor-not-allowed shadow-te-key'
                     : 'bg-te-knob-red text-te-bone shadow-te-key hover:brightness-110 active:translate-y-[1px] active:shadow-te-key-active'
@@ -429,7 +429,7 @@ export default function AgentLab() {
               </button>
 
               {(!apiKey || !baseUrl || !customModelId) && (
-                <div className="text-[9px] font-te-mono uppercase tracking-widest text-te-warn/90 leading-relaxed">
+                <div className="text-[11px] font-te-mono uppercase tracking-widest text-te-warn/90 leading-relaxed">
                   ⚠ {!baseUrl ? 'base url' : !customModelId ? 'model id' : 'api key'} not set
                 </div>
               )}
@@ -440,7 +440,7 @@ export default function AgentLab() {
           {response?.events && response.events.length > 0 && (
             <Panel title="trace" meta={`${response.events.length} events`}>
               <div className="bg-te-charcoal rounded-md p-3 shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] max-h-[280px] overflow-auto">
-                <pre className="text-[11px] font-lcd text-te-lcd-fg leading-snug">
+                <pre className="text-[13px] font-lcd text-te-lcd-fg leading-snug">
                   {response.events.map((e, i) => formatEvent(e, i)).join('\n')}
                 </pre>
               </div>
@@ -469,14 +469,14 @@ export default function AgentLab() {
 
             {response?.error && (
               <div className="bg-te-bone-dim rounded-md p-4">
-                <div className="text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-err mb-2">
+                <div className="text-[13px] font-te-mono uppercase tracking-[0.2em] text-te-err mb-2">
                   ✗ {response.error.kind}
                 </div>
-                <div className="text-[12px] font-te lowercase text-te-charcoal/85 leading-relaxed">
+                <div className="text-[14px] font-te lowercase text-te-charcoal/85 leading-relaxed">
                   {response.error.message}
                 </div>
                 {response.error.issues && (
-                  <ul className="mt-2 text-[10px] font-te-mono lowercase text-te-charcoal/65 list-disc pl-4">
+                  <ul className="mt-2 text-[12px] font-te-mono lowercase text-te-charcoal/65 list-disc pl-4">
                     {response.error.issues.slice(0, 8).map((i, idx) => (
                       <li key={idx}>{i}</li>
                     ))}
@@ -577,22 +577,22 @@ function EngramSummary({ data }: { data: DirectorOutput }) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <div className="text-[15px] font-semibold lowercase">{e.title.toLowerCase()}</div>
-        <div className="text-[11px] font-te italic text-te-charcoal/75 leading-relaxed mt-1">
+        <div className="text-[17px] font-semibold lowercase">{e.title.toLowerCase()}</div>
+        <div className="text-[13px] font-te italic text-te-charcoal/75 leading-relaxed mt-1">
           {e.logline}
         </div>
-        <div className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mt-2">
+        <div className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mt-2">
           {e.characters.length} cast · {e.scenes.length} scenes · {totalShots} shots
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {e.characters.slice(0, 4).map((c) => (
           <div key={c.id} className="bg-te-bone-dim rounded-md p-2 shadow-te-key">
-            <div className="text-[11px] font-semibold lowercase">{c.name.toLowerCase()}</div>
-            <div className="text-[9px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55">
+            <div className="text-[13px] font-semibold lowercase">{c.name.toLowerCase()}</div>
+            <div className="text-[11px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55">
               {c.role.toLowerCase()}
             </div>
-            <div className="text-[10px] lowercase text-te-charcoal/70 mt-1 line-clamp-2">
+            <div className="text-[12px] lowercase text-te-charcoal/70 mt-1 line-clamp-2">
               {c.appearance}
             </div>
           </div>
@@ -614,15 +614,15 @@ function ImagePromptRow({
       <RenderTile render={render} aspectRatio={prompt.aspectRatio} />
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/65">
+          <span className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/65">
             {prompt.shotId} · {prompt.aspectRatio}
           </span>
           <RenderStatusBadge render={render} />
         </div>
-        <div className="text-[11px] font-lcd text-te-charcoal/85 leading-snug whitespace-pre-wrap break-words">
+        <div className="text-[13px] font-lcd text-te-charcoal/85 leading-snug whitespace-pre-wrap break-words">
           {prompt.imagePrompt}
         </div>
-        <div className="text-[9px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/45 mt-2 leading-snug">
+        <div className="text-[11px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/45 mt-2 leading-snug">
           ⊘ {prompt.negativePrompt}
         </div>
       </div>
@@ -642,7 +642,7 @@ function RenderTile({
   if (render.status === 'idle') {
     return (
       <div className={wrap}>
-        <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-charcoal/30">
+        <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-charcoal/30">
           idle
         </span>
       </div>
@@ -652,7 +652,7 @@ function RenderTile({
     return (
       <div className={wrap}>
         <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-te-charcoal via-te-bone-dim/15 to-te-charcoal" />
-        <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-knob-orange relative">
+        <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-knob-orange relative">
           rendering…
         </span>
       </div>
@@ -661,7 +661,7 @@ function RenderTile({
   if (render.status === 'error') {
     return (
       <div className={wrap}>
-        <span className="text-[8px] font-te-mono uppercase tracking-wider text-te-err leading-tight px-1.5 text-center break-all">
+        <span className="text-[10px] font-te-mono uppercase tracking-wider text-te-err leading-tight px-1.5 text-center break-all">
           ✗ {render.message.slice(0, 80)}
         </span>
       </div>
@@ -683,21 +683,21 @@ function RenderStatusBadge({ render }: { render: RenderState }) {
   switch (render.status) {
     case 'loading':
       return (
-        <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-knob-orange/85 flex items-center gap-1">
+        <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-knob-orange/85 flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-te-knob-orange animate-pulse" />
           rendering
         </span>
       );
     case 'ok':
       return (
-        <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-ok/85 flex items-center gap-1">
+        <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-ok/85 flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-te-ok" />
           {render.durationMs}ms
         </span>
       );
     case 'error':
       return (
-        <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-err/85 flex items-center gap-1">
+        <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-err/85 flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-te-err" />
           err
         </span>
@@ -733,12 +733,12 @@ function rendersMeta(renders: Record<string, RenderState>): string {
 function TraceRow({ entry }: { entry: DirectorTraceEntry }) {
   return (
     <div className="flex items-center justify-between bg-te-bone-dim rounded-sm px-3 py-1.5 shadow-te-key">
-      <div className="flex items-center gap-2 text-[10px] font-te-mono uppercase tracking-[0.18em]">
+      <div className="flex items-center gap-2 text-[12px] font-te-mono uppercase tracking-[0.18em]">
         <span className="text-te-charcoal/45 w-6">{String(entry.step).padStart(2, '0')}</span>
         <span className={entry.ok ? 'text-te-ok' : 'text-te-err'}>{entry.ok ? '✓' : '✗'}</span>
         <span className="text-te-charcoal">{entry.agent}</span>
       </div>
-      <div className="text-[10px] font-te-mono lowercase text-te-charcoal/55">
+      <div className="text-[12px] font-te-mono lowercase text-te-charcoal/55">
         {entry.attempts}× · {entry.durationMs}ms
         {entry.error ? ` · ${entry.error.kind}` : ''}
       </div>

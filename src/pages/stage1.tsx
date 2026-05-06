@@ -17,6 +17,7 @@ import { useScriptStore } from '@/store/scriptStore';
 import { useProjectStore } from '@/store/projectStore';
 import { isTauriEnv, loadStory, writeStory } from '@/shared/lib/tauri-fs';
 import { Key, Panel, Divider } from '@/shared/ui/te';
+import { LlmConfigDrawer } from '@/shared/ui/LlmConfigDrawer';
 import { countWords, extractTitle } from '@/core/types/story';
 
 interface GenerateResponse {
@@ -142,14 +143,15 @@ export default function Stage1Page() {
       <header className="px-8 pt-6 pb-4 flex items-end justify-between border-b border-te-bone-edge/40">
         <div className="flex items-center gap-3">
           <span className="w-2 h-2 rounded-full bg-te-knob-orange shadow-[0_0_4px_rgba(232,134,42,0.8)]" />
-          <h1 className="text-[18px] font-semibold lowercase tracking-tight">
+          <h1 className="text-[22px] font-semibold lowercase tracking-tight">
             ai director · stage 1 · story
           </h1>
-          <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
+          <span className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
             prose draft
           </span>
         </div>
-        <div className="flex items-center gap-4 text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+        <div className="flex items-center gap-4 text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+          <LlmConfigDrawer />
           <span>project · {projectMeta.name}</span>
           <span>format · {projectMeta.format}</span>
           <span>aspect · {projectMeta.aspectRatio}</span>
@@ -162,7 +164,7 @@ export default function Stage1Page() {
       <section className="px-8 py-6 max-w-[1100px] mx-auto flex flex-col gap-5">
         {/* ── api ready hint ────────────────────────────────────────── */}
         {!apiReady && (
-          <div className="px-4 py-3 rounded-md bg-te-warn/15 border border-te-warn/40 text-[11px] font-te-mono lowercase leading-relaxed text-te-charcoal/80">
+          <div className="px-4 py-3 rounded-md bg-te-warn/15 border border-te-warn/40 text-[13px] font-te-mono lowercase leading-relaxed text-te-charcoal/80">
             llm backbone not configured. open{' '}
             <a className="underline" href="/agent-lab">
               /agent-lab
@@ -185,7 +187,7 @@ export default function Stage1Page() {
             />
 
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-[9px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/50">
+              <div className="flex items-center gap-2 text-[11px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/50">
                 <span className="w-1.5 h-1.5 rounded-full bg-te-knob-orange" />
                 format · {projectMeta.format}
                 <span className="w-1 h-1 rounded-full bg-te-charcoal/30 mx-1" />
@@ -208,7 +210,7 @@ export default function Stage1Page() {
 
         {/* ── error banner ──────────────────────────────────────────── */}
         {error && (
-          <div className="px-4 py-3 rounded-md bg-te-err/10 border border-te-err/40 text-[11px] font-te-mono lowercase leading-relaxed text-te-err">
+          <div className="px-4 py-3 rounded-md bg-te-err/10 border border-te-err/40 text-[13px] font-te-mono lowercase leading-relaxed text-te-err">
             error · {error}
           </div>
         )}
@@ -224,7 +226,7 @@ export default function Stage1Page() {
         >
           {draft ? (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between text-[10px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55">
+              <div className="flex items-center justify-between text-[12px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55">
                 <span>title · {title}</span>
                 <span>
                   {lastSavedAt
@@ -261,7 +263,7 @@ export default function Stage1Page() {
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center text-[11px] font-te-mono lowercase tracking-wide text-te-charcoal/45">
+            <div className="py-12 text-center text-[13px] font-te-mono lowercase tracking-wide text-te-charcoal/45">
               {isGenerating
                 ? '✦ writing your story…'
                 : 'no draft yet · type an idea above and press generate'}
@@ -276,7 +278,7 @@ export default function Stage1Page() {
           <button
             type="button"
             onClick={() => router.push('/')}
-            className="text-[10px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/55 hover:text-te-charcoal transition-colors"
+            className="text-[12px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/55 hover:text-te-charcoal transition-colors"
           >
             ← back to entry
           </button>
@@ -284,7 +286,7 @@ export default function Stage1Page() {
             type="button"
             onClick={() => router.push('/agent-lab')}
             disabled={!draft}
-            className="text-[10px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/55 hover:text-te-charcoal transition-colors disabled:opacity-30 disabled:hover:text-te-charcoal/55"
+            className="text-[12px] font-te-mono lowercase tracking-[0.18em] text-te-charcoal/55 hover:text-te-charcoal transition-colors disabled:opacity-30 disabled:hover:text-te-charcoal/55"
             title={
               draft
                 ? 'agent lab — current stage 2 prototype'

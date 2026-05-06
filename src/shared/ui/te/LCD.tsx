@@ -44,7 +44,7 @@ export function LCD({
       )}
       {/* header strip */}
       {(title || meta) && (
-        <div className="absolute top-0 left-0 right-0 flex justify-between items-center px-2 py-1 text-[10px] font-lcd uppercase tracking-[0.15em] text-te-lcd-fg/60">
+        <div className="absolute top-0 left-0 right-0 flex justify-between items-center px-2 py-1 text-[12px] font-lcd uppercase tracking-[0.15em] text-te-lcd-fg/60">
           <span>{title}</span>
           <span>{meta}</span>
         </div>

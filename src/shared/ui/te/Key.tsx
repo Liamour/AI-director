@@ -19,11 +19,11 @@ interface KeyProps {
 }
 
 const VARIANT_SIZE: Record<KeyVariant, string> = {
-  text: 'h-9 px-3 min-w-[2.5rem] text-[10px]',
-  numbered: 'h-11 w-9 text-[11px]',
+  text: 'h-9 px-3 min-w-[2.5rem] text-[12px]',
+  numbered: 'h-11 w-9 text-[13px]',
   transport: 'h-10 w-12 text-base',
   rec: 'h-10 w-10 text-base',
-  wide: 'h-9 px-5 min-w-[5rem] text-[10px]',
+  wide: 'h-9 px-5 min-w-[5rem] text-[12px]',
 };
 
 const INDICATOR_BG: Record<KeyIndicator, string> = {
@@ -77,7 +77,7 @@ export function Key({
       )}
       <span className="leading-none">{children}</span>
       {sublabel && (
-        <span className="mt-0.5 text-[8px] font-te-mono opacity-60 leading-none">
+        <span className="mt-0.5 text-[10px] font-te-mono opacity-60 leading-none">
           {sublabel}
         </span>
       )}

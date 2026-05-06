@@ -186,14 +186,14 @@ export default function Workspace() {
                 : 'bg-te-charcoal/30'
             }`}
           />
-          <h1 className="text-[18px] font-te font-semibold lowercase tracking-tight">
+          <h1 className="text-[22px] font-te font-semibold lowercase tracking-tight">
             ai director
           </h1>
-          <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
+          <span className="text-[12px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">
             workspace
           </span>
         </div>
-        <div className="flex items-center gap-4 text-[10px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55">
+        <div className="flex items-center gap-4 text-[12px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55">
           <span>proj · {(projectName ?? 'unnamed').toLowerCase()}</span>
           <span>·</span>
           <span>
@@ -301,7 +301,7 @@ export default function Workspace() {
             <div className="flex flex-col gap-4">
               {/* model preset keys */}
               <div>
-                <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                   model
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -320,7 +320,7 @@ export default function Workspace() {
 
               {/* prompt console */}
               <div>
-                <label className="block text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
+                <label className="block text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2">
                   prompt
                 </label>
                 <div className="rounded-md bg-te-charcoal shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] p-3">
@@ -329,7 +329,7 @@ export default function Workspace() {
                     onChange={(e) => setUserPrompt(e.target.value)}
                     disabled={isGenerating}
                     placeholder="describe scene · style · characters..."
-                    className="w-full min-h-[140px] bg-transparent border-none outline-none resize-vertical text-te-lcd-fg font-lcd text-[15px] leading-tight placeholder:text-te-lcd-dim/60 disabled:opacity-50"
+                    className="w-full min-h-[140px] bg-transparent border-none outline-none resize-vertical text-te-lcd-fg font-lcd text-[17px] leading-tight placeholder:text-te-lcd-dim/60 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -339,7 +339,7 @@ export default function Workspace() {
                 <button
                   type="button"
                   onClick={() => setShowApiSettings((v) => !v)}
-                  className="text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 hover:text-te-knob-orange transition-colors flex items-center gap-1"
+                  className="text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 hover:text-te-knob-orange transition-colors flex items-center gap-1"
                 >
                   [{showApiSettings ? '−' : '+'}] api · advanced
                 </button>
@@ -379,7 +379,7 @@ export default function Workspace() {
                 type="button"
                 onClick={handleGenerate}
                 disabled={isGenerating || !userPrompt.trim()}
-                className={`w-full h-12 rounded-md font-te lowercase text-[12px] tracking-[0.18em] transition-all flex items-center justify-center gap-2 select-none
+                className={`w-full h-12 rounded-md font-te lowercase text-[14px] tracking-[0.18em] transition-all flex items-center justify-center gap-2 select-none
                   ${isGenerating || !userPrompt.trim()
                     ? 'bg-te-bone-dim text-te-charcoal/35 cursor-not-allowed shadow-te-key'
                     : 'bg-te-knob-red text-te-bone shadow-te-key hover:brightness-110 active:translate-y-[1px] active:shadow-te-key-active'
@@ -399,7 +399,7 @@ export default function Workspace() {
               </button>
 
               {!apiKey && (
-                <div className="text-[9px] font-te-mono uppercase tracking-widest text-te-warn/90 leading-relaxed">
+                <div className="text-[11px] font-te-mono uppercase tracking-widest text-te-warn/90 leading-relaxed">
                   ⚠ api key not set · open advanced to configure
                 </div>
               )}
@@ -517,13 +517,13 @@ function ModeContent({
     return (
       <Panel title="script" meta="logline">
         <div className="flex flex-col gap-3">
-          <div className="text-[16px] font-te lowercase font-semibold text-te-charcoal">
+          <div className="text-[18px] font-te lowercase font-semibold text-te-charcoal">
             {scriptData?.title.toLowerCase()}
           </div>
-          <div className="text-[12px] font-te italic text-te-charcoal/65 leading-relaxed">
+          <div className="text-[14px] font-te italic text-te-charcoal/65 leading-relaxed">
             {scriptData?.logline}
           </div>
-          <div className="text-[10px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/50 mt-2">
+          <div className="text-[12px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/50 mt-2">
             {scriptData?.scenes.length} scenes · {scriptData?.scenes.reduce((s, sc) => s + sc.shots.length, 0)} shots
           </div>
         </div>
@@ -559,11 +559,11 @@ function ModeContent({
                   : 'bg-te-bone-dim shadow-te-key hover:bg-te-bone-deep'
               }`}
             >
-              <div className="text-[10px] font-te-mono uppercase tracking-[0.18em] opacity-60">
+              <div className="text-[12px] font-te-mono uppercase tracking-[0.18em] opacity-60">
                 {s.sceneId}
               </div>
-              <div className="text-[13px] font-te lowercase mt-1">{s.location.toLowerCase()}</div>
-              <div className="text-[10px] font-te-mono lowercase opacity-55 mt-1">
+              <div className="text-[15px] font-te lowercase mt-1">{s.location.toLowerCase()}</div>
+              <div className="text-[12px] font-te-mono lowercase opacity-55 mt-1">
                 {s.timeOfDay} · {s.shots.length} shots
               </div>
             </button>
@@ -658,26 +658,26 @@ function ActiveShotDetail({ shot, sceneLocation }: { shot: Shot; sceneLocation: 
   return (
     <div className="bg-te-bone-dim rounded-md p-4 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+        <span className="text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
           {shot.shotId.toLowerCase()} · detail
         </span>
-        <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-charcoal/45">
+        <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-charcoal/45">
           {shot.type.toLowerCase()} · {sceneLocation.toLowerCase()}
         </span>
       </div>
-      <p className="text-[13px] font-te lowercase leading-relaxed text-te-charcoal mb-2">
+      <p className="text-[15px] font-te lowercase leading-relaxed text-te-charcoal mb-2">
         {shot.visualDescription}
       </p>
       {shot.dialogue && (
         <div className="border-l-2 border-te-knob-orange/70 pl-2 mb-1">
-          <span className="text-[9px] font-te-mono uppercase tracking-widest text-te-charcoal/45">
+          <span className="text-[11px] font-te-mono uppercase tracking-widest text-te-charcoal/45">
             dialogue
           </span>
-          <p className="text-[12px] font-te italic text-te-charcoal/85">"{shot.dialogue}"</p>
+          <p className="text-[14px] font-te italic text-te-charcoal/85">"{shot.dialogue}"</p>
         </div>
       )}
       {shot.action && (
-        <div className="text-[10px] font-te-mono uppercase text-te-charcoal/55">
+        <div className="text-[12px] font-te-mono uppercase text-te-charcoal/55">
           [action] {shot.action.toLowerCase()}
         </div>
       )}
@@ -689,13 +689,13 @@ function CharacterCard({ char }: { char: Character }) {
   return (
     <div className="bg-te-bone-dim rounded-md p-3 shadow-te-key">
       <div className="flex items-center justify-between mb-1">
-        <div className="text-[12px] font-te lowercase font-semibold">{char.name.toLowerCase()}</div>
+        <div className="text-[14px] font-te lowercase font-semibold">{char.name.toLowerCase()}</div>
         <div className="w-1.5 h-1.5 rounded-full bg-te-knob-blue" />
       </div>
-      <div className="text-[9px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55 mb-2">
+      <div className="text-[11px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/55 mb-2">
         {char.role.toLowerCase()}
       </div>
-      <div className="text-[11px] font-te lowercase text-te-charcoal/75 leading-snug">
+      <div className="text-[13px] font-te lowercase text-te-charcoal/75 leading-snug">
         {char.appearance}
       </div>
     </div>
@@ -706,12 +706,12 @@ function CharacterRow({ char }: { char: Character }) {
   return (
     <div className="bg-te-bone-dim rounded-md px-3 py-2 shadow-te-key">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-te lowercase font-semibold">{char.name.toLowerCase()}</span>
-        <span className="text-[8px] font-te-mono uppercase tracking-widest text-te-charcoal/50">
+        <span className="text-[13px] font-te lowercase font-semibold">{char.name.toLowerCase()}</span>
+        <span className="text-[10px] font-te-mono uppercase tracking-widest text-te-charcoal/50">
           {char.role.toLowerCase()}
         </span>
       </div>
-      <div className="text-[10px] font-te lowercase text-te-charcoal/65 mt-0.5 line-clamp-2">
+      <div className="text-[12px] font-te lowercase text-te-charcoal/65 mt-0.5 line-clamp-2">
         {char.appearance}
       </div>
     </div>
@@ -721,7 +721,7 @@ function CharacterRow({ char }: { char: Character }) {
 function ConfigRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[8px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
+      <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55">
         {label}
       </span>
       {children}

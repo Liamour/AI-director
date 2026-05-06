@@ -33,10 +33,10 @@ export function Tape({
         <Reel playing={playing} />
         <div className="flex-1">
           <div className="flex items-baseline justify-between">
-            <span className="text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/60">
+            <span className="text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/60">
               tape · 4-track sequencer
             </span>
-            <span className="font-lcd text-[14px] text-te-charcoal/70">
+            <span className="font-lcd text-[16px] text-te-charcoal/70">
               {formatTime(currentSec)} / {formatTime(totalSeconds)}
             </span>
           </div>
@@ -60,7 +60,7 @@ export function Tape({
         />
         {tracks.map((track, ti) => (
           <div key={ti} className="flex items-center gap-2">
-            <div className="w-7 text-[9px] font-te-mono uppercase text-te-bone/50">
+            <div className="w-7 text-[11px] font-te-mono uppercase text-te-bone/50">
               {track.label}
             </div>
             <div className="flex-1 flex h-5 gap-[1px] items-center">

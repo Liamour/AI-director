@@ -2,12 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────
+ * Global type scale.
+ * Bumped 2026-05 from default 16px to 17px so all TE micro-labels feel
+ * legible without sacrificing the chassis density. Per-component sizes
+ * still use absolute px, but anything unstyled falls back to this.
+ * ──────────────────────────────────────────────────────────────────── */
+html {
+  font-size: 17px;
+}
+
 body {
-  background-color: #1A1A1A;
-  color: #D1D5DB;
-  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Monaco, Consolas, monospace;
+  /* most pages override with bg-te-bone; this is the dark fallback for
+     any future page that wants the dark workspace look */
+  background-color: #F7F5EF;
+  color: #161616;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {

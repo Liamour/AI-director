@@ -81,15 +81,15 @@ export default function TELab() {
         <div>
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-te-knob-red shadow-[0_0_8px_rgba(214,48,49,0.7)]" />
-            <h1 className="text-[22px] font-te font-semibold lowercase tracking-tight">
+            <h1 className="text-[26px] font-te font-semibold lowercase tracking-tight">
               ai director · te lab
             </h1>
           </div>
-          <p className="mt-1 text-[10px] font-te-mono uppercase tracking-[0.22em] text-te-charcoal/55">
+          <p className="mt-1 text-[12px] font-te-mono uppercase tracking-[0.22em] text-te-charcoal/55">
             design language sandbox · v0.1
           </p>
         </div>
-        <div className="flex items-center gap-4 text-[10px] font-te-mono uppercase tracking-widest text-te-charcoal/55">
+        <div className="flex items-center gap-4 text-[12px] font-te-mono uppercase tracking-widest text-te-charcoal/55">
           <span>proj_neon01</span>
           <span>·</span>
           <span>{playing ? 'playing' : recording ? 'recording' : 'idle'}</span>
@@ -174,7 +174,7 @@ export default function TELab() {
 
               {/* shot strip — 16 numbered keys */}
               <div className="bg-te-bone-dim rounded-lg p-3 shadow-[inset_0_2px_4px_rgba(0,0,0,0.08)]">
-                <div className="text-[9px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2 px-1">
+                <div className="text-[11px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/55 mb-2 px-1">
                   shot keys · 1–16
                 </div>
                 <div className="grid grid-cols-16 gap-1.5" style={{ gridTemplateColumns: 'repeat(16, 1fr)' }}>
@@ -271,7 +271,7 @@ export default function TELab() {
                 <LCDBars values={bars.slice(0, 18)} height={32} />
               </LCD>
               <LCD title="text" height={56}>
-                <div className="font-lcd text-[16px] leading-tight">
+                <div className="font-lcd text-[18px] leading-tight">
                   ready · 12 shots queued
                   <br />
                   press ● to generate
@@ -304,7 +304,7 @@ export default function TELab() {
         {/* footer notes */}
         <div className="col-span-12">
           <Panel title="design notes" variant="recessed">
-            <ul className="text-[11px] font-te leading-relaxed text-te-charcoal/75 space-y-1 list-disc pl-4">
+            <ul className="text-[13px] font-te leading-relaxed text-te-charcoal/75 space-y-1 list-disc pl-4">
               <li>typeface · inter (ui) + jetbrains mono (technical) + vt323 (lcd). all-lowercase by convention.</li>
               <li>color · 4 functional knobs (style/motion/lens/mood) — never decorative. red is reserved for record/destructive.</li>
               <li>grid · 8px modular. all paddings, gaps, sizes derive from this.</li>
@@ -315,7 +315,7 @@ export default function TELab() {
         </div>
       </section>
 
-      <footer className="px-8 py-4 border-t border-te-bone-edge/40 flex items-center justify-between text-[9px] font-te-mono uppercase tracking-[0.22em] text-te-charcoal/45">
+      <footer className="px-8 py-4 border-t border-te-bone-edge/40 flex items-center justify-between text-[11px] font-te-mono uppercase tracking-[0.22em] text-te-charcoal/45">
         <span>te-lab · src/pages/te-lab.tsx</span>
         <span>navigate / and /workspace for the live app</span>
       </footer>

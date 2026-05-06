@@ -65,7 +65,7 @@ export function ShotCard({
     <div className="bg-te-bone rounded-lg shadow-te-panel overflow-hidden flex flex-col">
       {/* header strip */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-te-bone-dim border-b border-te-bone-edge/40">
-        <span className="text-[9px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/60">
+        <span className="text-[11px] font-te-mono uppercase tracking-[0.18em] text-te-charcoal/60">
           shot {indexStr}{total ? `/${String(total).padStart(2, '0')}` : ''}
         </span>
         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_COLOR[status]}`} />
@@ -80,10 +80,10 @@ export function ShotCard({
 
       {/* meta */}
       <div className="px-3 pt-2 pb-1 flex flex-col gap-0.5">
-        <div className="text-[11px] font-te lowercase text-te-charcoal leading-tight">
+        <div className="text-[13px] font-te lowercase text-te-charcoal leading-tight">
           {location}
         </div>
-        <div className="text-[9px] font-te-mono uppercase tracking-widest text-te-charcoal/55">
+        <div className="text-[11px] font-te-mono uppercase tracking-widest text-te-charcoal/55">
           {shotType} · {duration} · {aspectRatio}
         </div>
       </div>
