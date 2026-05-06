@@ -10,10 +10,13 @@ import { mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { PROJECT_SCHEMA_VERSION, type ProjectMeta } from '@/core/types/project';
 import {
-  SCRIPT_INDEX_FILENAME,
-  SCRIPT_INDEX_SCHEMA_VERSION,
-  STORY_FILENAME,
-  type ScriptIndex,
+  EPISODES_DIR,
+  EPISODE_SCRIPT_FILENAME,
+  STORY_INDEX_FILENAME,
+  STORY_SCHEMA_VERSION,
+  episodeFolderName,
+  type Episode,
+  type StoryProject,
 } from '@/core/types/story';
 
 /**
@@ -182,92 +185,132 @@ export const writeProjectMeta = async (
   }
 };
 
-// ── Stage 1 story FS helpers ─────────────────────────────────────────────
+// ── Stage 1 story FS helpers (episode-first) ─────────────────────────────
 
 /**
- * Persist the markdown prose script to `<rootPath>/总剧本.md`. In web
- * preview mode this is a no-op (returns false) — caller should treat
- * Zustand state as the only source of truth.
+ * Shape we serialize as `总剧本.index.json`. We strip per-episode `content`
+ * here because content lives in each `EPxx/剧本.md` file — keeping it out
+ * of the index avoids huge JSON and double-source-of-truth pain.
  */
-export const writeStory = async (
+interface IndexFile {
+  schemaVersion: number;
+  idea: string;
+  title?: string;
+  generatedAt: string;
+  updatedAt: string;
+  episodes: Array<Pick<Episode, 'id' | 'number' | 'title' | 'logline' | 'updatedAt'>>;
+}
+
+/**
+ * Write the entire story project to disk:
+ *   1. `<root>/总剧本.index.json`     — episode list (no content)
+ *   2. `<root>/剧集分镜/EPxx/剧本.md` — one file per episode (content)
+ *
+ * Web preview mode is a no-op — the caller keeps state in Zustand only.
+ *
+ * NOTE: this is "write what's in memory" — old episode folders are NOT
+ * pruned. After a regenerate the user might end up with stale EPxx folders
+ * past the new max number; we'll add a prune step in a follow-up.
+ */
+export const writeStoryProject = async (
   rootPath: string,
-  content: string
+  story: StoryProject
 ): Promise<boolean> => {
   try {
     if (!isTauriEnv()) {
-      console.warn('[Mock] Web preview: 总剧本.md not written to disk');
+      console.warn('[Mock] Web preview: story project not written to disk');
       return false;
     }
-    const path = await join(rootPath, STORY_FILENAME);
-    await writeTextFile(path, content);
+
+    // ensure 剧集分镜 dir exists
+    await mkdir(await join(rootPath, EPISODES_DIR), { recursive: true });
+
+    // write each episode's 剧本.md
+    for (const ep of story.episodes) {
+      const folder = await join(rootPath, EPISODES_DIR, episodeFolderName(ep.number));
+      await mkdir(folder, { recursive: true });
+      await writeTextFile(await join(folder, EPISODE_SCRIPT_FILENAME), ep.content);
+    }
+
+    // write the slim index
+    const indexPath = await join(rootPath, STORY_INDEX_FILENAME);
+    const indexFile: IndexFile = {
+      schemaVersion: STORY_SCHEMA_VERSION,
+      idea: story.idea,
+      title: story.title,
+      generatedAt: story.generatedAt,
+      updatedAt: story.updatedAt,
+      episodes: story.episodes.map(({ id, number, title, logline, updatedAt }) => ({
+        id,
+        number,
+        title,
+        logline,
+        updatedAt,
+      })),
+    };
+    await writeTextFile(indexPath, JSON.stringify(indexFile, null, 2));
     return true;
   } catch (error) {
-    console.error('[writeStory] failed:', error);
+    console.error('[writeStoryProject] failed:', error);
     return false;
   }
 };
 
 /**
- * Persist the episode boundary index to `<rootPath>/总剧本.index.json`.
- * Web preview is no-op (returns false). Pretty-printed JSON for legibility
- * — this file is small and humans may inspect it.
+ * Read the full story project from disk: parse the index, then read each
+ * episode's 剧本.md. Returns null if the index is missing or unreadable.
+ * Individual episode read failures fall back to empty content (so the
+ * sidebar still shows the slot — user can re-enter the prose).
  */
-export const writeScriptIndex = async (
-  rootPath: string,
-  index: ScriptIndex
-): Promise<boolean> => {
-  try {
-    if (!isTauriEnv()) {
-      console.warn('[Mock] Web preview: 总剧本.index.json not written to disk');
-      return false;
-    }
-    const path = await join(rootPath, SCRIPT_INDEX_FILENAME);
-    await writeTextFile(path, JSON.stringify(index, null, 2));
-    return true;
-  } catch (error) {
-    console.error('[writeScriptIndex] failed:', error);
-    return false;
-  }
-};
-
-/**
- * Read & parse `<rootPath>/总剧本.index.json`. Returns null when missing
- * (fresh project), unreadable, or schema-mismatched. Schema mismatch logs
- * a warning so the caller can decide whether to migrate or refuse.
- */
-export const loadScriptIndex = async (
+export const loadStoryProject = async (
   rootPath: string
-): Promise<ScriptIndex | null> => {
+): Promise<StoryProject | null> => {
   try {
     if (!isTauriEnv()) return null;
-    const path = await join(rootPath, SCRIPT_INDEX_FILENAME);
-    const content = await readTextFile(path);
-    const parsed = JSON.parse(content) as ScriptIndex;
-    if (parsed.schemaVersion !== SCRIPT_INDEX_SCHEMA_VERSION) {
+    const indexPath = await join(rootPath, STORY_INDEX_FILENAME);
+    const indexRaw = await readTextFile(indexPath);
+    const idx = JSON.parse(indexRaw) as IndexFile;
+    if (idx.schemaVersion !== STORY_SCHEMA_VERSION) {
       console.warn(
-        `[loadScriptIndex] schema mismatch: file=${parsed.schemaVersion} expected=${SCRIPT_INDEX_SCHEMA_VERSION}`
+        `[loadStoryProject] schema mismatch: file=${idx.schemaVersion} expected=${STORY_SCHEMA_VERSION}`
       );
     }
-    return parsed;
-  } catch (error) {
-    // Missing index is the common case on fresh projects — warn-level only.
-    console.warn('[loadScriptIndex] not readable:', error);
-    return null;
-  }
-};
 
-/**
- * Read `<rootPath>/总剧本.md`. Returns null when the file doesn't exist
- * (fresh project) or when running in web preview.
- */
-export const loadStory = async (rootPath: string): Promise<string | null> => {
-  try {
-    if (!isTauriEnv()) return null;
-    const path = await join(rootPath, STORY_FILENAME);
-    return await readTextFile(path);
+    const episodes: Episode[] = [];
+    for (const ep of idx.episodes ?? []) {
+      let content = '';
+      try {
+        const epFile = await join(
+          rootPath,
+          EPISODES_DIR,
+          episodeFolderName(ep.number),
+          EPISODE_SCRIPT_FILENAME
+        );
+        content = await readTextFile(epFile);
+      } catch (err) {
+        console.warn(`[loadStoryProject] episode ${ep.number} 剧本.md not readable:`, err);
+      }
+      episodes.push({
+        id: ep.id,
+        number: ep.number,
+        title: ep.title,
+        logline: ep.logline,
+        content,
+        updatedAt: ep.updatedAt,
+      });
+    }
+
+    return {
+      schemaVersion: idx.schemaVersion,
+      idea: idx.idea ?? '',
+      title: idx.title,
+      episodes,
+      generatedAt: idx.generatedAt ?? new Date().toISOString(),
+      updatedAt: idx.updatedAt ?? new Date().toISOString(),
+    };
   } catch (error) {
-    // ENOENT is expected on fresh projects — log only at warn level
-    console.warn('[loadStory] not readable:', error);
+    // Missing index is the common case on fresh projects — warn only
+    console.warn('[loadStoryProject] not readable:', error);
     return null;
   }
 };

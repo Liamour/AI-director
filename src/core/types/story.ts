@@ -1,135 +1,86 @@
 // ──────────────────────────────────────────────────────────────────────────
-// StoryDraft — Stage 1 prose script. See HANDOFF.md §1.5.
+// Stage 1 story model — episode-first.
 //
-// One per project. Lives on disk as `<root>/总剧本.md`. The `.index.json`
-// sibling (added in Sprint 2.2) holds the structured episode-boundary
-// metadata so we don't have to re-parse markdown every time.
+// LLM generates a list of episodes directly (one structured prompt → many
+// episodes). Each episode owns its own markdown content and lives in its
+// own folder on disk. There is no monolithic 总剧本.md; the "project" is
+// just an index file pointing at per-episode files.
 //
-// Stage 1 stays at the *storytelling layer*. We deliberately avoid baking
-// shot decisions (camera moves, focal lengths) into the prose — those are
-// Stage 2 concerns. Keeping the layers clean means a single LLM pass can
-// later replace the screenwriter without invalidating the storyboard work.
+// Disk layout:
+//   <root>/
+//   ├── 总剧本.index.json          ← project-level index (this file)
+//   └── 剧集分镜/
+//       ├── EP01/
+//       │   └── 剧本.md            ← episode content (markdown)
+//       ├── EP02/
+//       │   └── 剧本.md
+//       └── ...
 // ──────────────────────────────────────────────────────────────────────────
 
-export interface StoryDraft {
-  /** Markdown prose content. Source of truth on disk: `<root>/总剧本.md`. */
-  content: string;
-  /** The original user idea that seeded this draft. Kept for context. */
-  idea: string;
-  /** ISO-8601, set every time the user edits or regenerates. */
-  updatedAt: string;
-  /** Optional title surfaced from the markdown's first H1 — UI cache only. */
-  title?: string;
-  /** Cheap word count for the status bar. UTF-16 codeunits / 5, ish. */
-  wordCount: number;
-}
+export const STORY_INDEX_FILENAME = '总剧本.index.json';
+export const EPISODES_DIR = '剧集分镜';
+export const EPISODE_SCRIPT_FILENAME = '剧本.md';
+export const STORY_SCHEMA_VERSION = 2;
 
-export const STORY_FILENAME = '总剧本.md';
-export const SCRIPT_INDEX_FILENAME = '总剧本.index.json';
-export const SCRIPT_INDEX_SCHEMA_VERSION = 1;
-
-// ──────────────────────────────────────────────────────────────────────────
-// Episode boundaries (Sprint 2.2)
-//
-// The prose script is one long markdown document. Episodes are LLM-proposed
-// "cut points" expressed as character offsets into that markdown — keeping
-// the script as one source of truth instead of N split files. Persistence:
-// `<root>/总剧本.index.json` sits next to 总剧本.md.
-//
-// Why offsets and not headings? Because the LLM may decide a natural break
-// is mid-paragraph in some genres (短视频 / 漫画), and we don't want to
-// mutate the user's prose just to mark a boundary.
-// ──────────────────────────────────────────────────────────────────────────
-
-export interface EpisodeBoundary {
-  /** Stable id within this index — episodes can be added/removed/reordered. */
+export interface Episode {
+  /** Internal stable id — survives reorder. */
   id: string;
-  /** Character offset in 总剧本.md where this episode starts. 0 for the first one. */
-  offset: number;
-  /** AI-suggested title; user-editable. */
+  /** Display order, 1-based. Folder name derives from this: EP01, EP02, ... */
+  number: number;
+  /** Episode title (e.g. "引子 · 雨夜邂逅"). User-editable. */
   title: string;
-  /** Optional 1-2 sentence rationale from the LLM ("why split here"). */
-  reason?: string;
+  /** One-or-two-sentence hook ("logline"). Optional but encouraged. */
+  logline?: string;
+  /** Full prose markdown for this episode. Source of truth on disk. */
+  content: string;
+  /** ISO-8601, set when the episode is created or its content changes. */
+  updatedAt: string;
 }
 
-export interface ScriptIndex {
+export interface StoryProject {
   schemaVersion: number;
-  /** Ordered list of cut points. The first should always have offset=0. */
-  episodes: EpisodeBoundary[];
-  /** ISO-8601 of the last analyze-episodes run; used to flag staleness. */
-  analyzedAt: string;
-  /** Length of 总剧本.md when analyze ran — diverging means the script changed. */
-  analyzedContentLength: number;
+  /** The seed idea the user typed. Kept so regenerate doesn't lose it. */
+  idea: string;
+  /** Title surfaced from the LLM (or user-edited). Falls back to project name. */
+  title?: string;
+  episodes: Episode[];
+  /** ISO-8601 of the last full LLM regenerate; UI shows it as "generated · …". */
+  generatedAt: string;
+  /** ISO-8601 of the last save (any episode or index). */
+  updatedAt: string;
 }
 
-export function createEmptyIndex(contentLength: number): ScriptIndex {
+// ── Factories ─────────────────────────────────────────────────────────────
+
+export function createEmptyStoryProject(idea: string): StoryProject {
+  const now = new Date().toISOString();
   return {
-    schemaVersion: SCRIPT_INDEX_SCHEMA_VERSION,
+    schemaVersion: STORY_SCHEMA_VERSION,
+    idea,
     episodes: [],
-    analyzedAt: new Date().toISOString(),
-    analyzedContentLength: contentLength,
+    generatedAt: now,
+    updatedAt: now,
   };
 }
 
-/** Generate a short readable id like `ep_lt12_xq` for new boundaries. */
 export function generateEpisodeId(): string {
   const ts = Date.now().toString(36).slice(-4);
   const rnd = Math.random().toString(36).slice(2, 5);
   return `ep_${ts}_${rnd}`;
 }
 
-/**
- * Find which episode contains a given character offset. Returns the episode
- * index (0-based) or -1 if no episodes are defined.
- */
-export function findEpisodeAt(index: ScriptIndex, offset: number): number {
-  if (index.episodes.length === 0) return -1;
-  let lastIdx = -1;
-  for (let i = 0; i < index.episodes.length; i++) {
-    if (index.episodes[i].offset <= offset) lastIdx = i;
-    else break;
-  }
-  return lastIdx;
+/** Folder name on disk for a given 1-based episode number: 1 → "EP01". */
+export function episodeFolderName(number: number): string {
+  return `EP${String(number).padStart(2, '0')}`;
 }
 
-/** Compute 1-based line number for an offset. Cheap, runs O(n) on offset. */
-export function offsetToLine(content: string, offset: number): number {
-  if (offset <= 0) return 1;
-  let line = 1;
-  const cap = Math.min(offset, content.length);
-  for (let i = 0; i < cap; i++) {
-    if (content.charCodeAt(i) === 10) line++;
-  }
-  return line;
-}
+// ── Cheap text utilities ──────────────────────────────────────────────────
 
-/**
- * Build an empty draft as a starting point. The `idea` field is preserved
- * so a regenerate flow can re-seed without re-prompting the user.
- */
-export function createEmptyDraft(idea: string): StoryDraft {
-  return {
-    content: '',
-    idea,
-    updatedAt: new Date().toISOString(),
-    wordCount: 0,
-  };
-}
-
-/**
- * Cheap word count — counts whitespace-delimited tokens. Good enough for a
- * status badge; not for billing or sentence-level analysis.
- */
 export function countWords(content: string): number {
   if (!content) return 0;
   return content.trim().split(/\s+/).filter(Boolean).length;
 }
 
-/**
- * Pull the document title from the first H1 in the markdown. Returns
- * undefined if there's none — caller falls back to project name.
- */
-export function extractTitle(content: string): string | undefined {
-  const m = content.match(/^\s*#\s+(.+?)\s*$/m);
-  return m?.[1]?.trim() || undefined;
+export function totalWordCount(project: StoryProject): number {
+  return project.episodes.reduce((sum, ep) => sum + countWords(ep.content), 0);
 }
