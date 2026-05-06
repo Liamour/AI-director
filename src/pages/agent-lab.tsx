@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from 'react';
 import { useScriptStore } from '@/store/scriptStore';
+import { useProjectStore } from '@/store/projectStore';
 import {
   Knob,
   Key,
@@ -69,6 +70,11 @@ export default function AgentLab() {
     comfyCheckpoint,
     setApiConfig,
   } = useScriptStore();
+  // Stage 0 project meta — feeds aspectRatio (and later: style) into the
+  // multi-agent pipeline so all shots default to the project-level format.
+  // Falls back to undefined when no project is loaded (e.g. direct visit
+  // to /agent-lab without going through index page).
+  const projectMeta = useProjectStore((s) => s.meta);
   const [idea, setIdea] = useState(
     'a cyberpunk noir short — neon alley pursuit at 3am, rain reflections, lone protagonist confronts a memory thief.'
   );
@@ -106,6 +112,9 @@ export default function AgentLab() {
           baseUrl,
           modelId: customModelId,
           cinematographerShotLimit: limitN,
+          // Stage 0 hint — cinematographer falls back to this when its own
+          // judgment doesn't dictate a different ratio. Project-level lock.
+          aspectRatio: projectMeta?.aspectRatio,
         }),
       });
       const json = (await res.json()) as DirectorResponse;
