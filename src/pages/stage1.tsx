@@ -434,35 +434,14 @@ export default function Stage1Page() {
         </div>
       </footer>
 
-      {/* local utility classes */}
+      {/* page-local — title input is special (no border, oversized) */}
       <style jsx>{`
-        :global(.te-input) {
-          width: 100%;
-          background: #1f2418;
-          color: #b8c77a;
-          font-family: 'JetBrains Mono', ui-monospace, monospace;
-          font-size: 14px;
-          padding: 12px 14px;
-          border-radius: 6px;
-          border: 1px solid rgba(0, 0, 0, 0.3);
-          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset, 0 0 12px rgba(0, 0, 0, 0.5) inset;
-          letter-spacing: 0.02em;
-          outline: none;
-          line-height: 1.6;
-        }
-        :global(.te-input::placeholder) {
-          color: #7a8a4a;
-        }
-        :global(.te-input:focus) {
-          box-shadow: 0 0 0 1px rgba(184, 199, 122, 0.5) inset,
-            0 0 12px rgba(0, 0, 0, 0.5) inset;
-        }
         :global(.te-title-input) {
           width: 100%;
           background: transparent;
           color: #161616;
           font-family: 'Inter', sans-serif;
-          font-size: 22px;
+          font-size: 24px;
           font-weight: 600;
           line-height: 1.2;
           letter-spacing: -0.01em;
@@ -562,7 +541,7 @@ function EpisodeEditor({
   onContentChange,
 }: EpisodeEditorProps) {
   return (
-    <div className="flex flex-col gap-4 max-w-[820px]">
+    <div className="flex flex-col gap-4 w-full">
       {/* episode chip */}
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-te-mono uppercase tracking-[0.2em] text-te-charcoal/45">

@@ -327,29 +327,6 @@ export default function EntryHub() {
         )}
       </AnimatePresence>
 
-      {/* local utility classes — borrowed from agent-lab so the modal input
-          matches the rest of the app without adding to globals.css */}
-      <style jsx>{`
-        :global(.te-input) {
-          width: 100%;
-          background: #1f2418;
-          color: #b8c77a;
-          font-family: 'JetBrains Mono', ui-monospace, monospace;
-          font-size: 12px;
-          padding: 10px 12px;
-          border-radius: 6px;
-          border: 1px solid rgba(0, 0, 0, 0.3);
-          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset, 0 0 12px rgba(0, 0, 0, 0.5) inset;
-          letter-spacing: 0.02em;
-          outline: none;
-        }
-        :global(.te-input::placeholder) {
-          color: #7a8a4a;
-        }
-        :global(.te-input:focus) {
-          box-shadow: 0 0 0 1px rgba(184, 199, 122, 0.5) inset, 0 0 12px rgba(0, 0, 0, 0.5) inset;
-        }
-      `}</style>
     </main>
   );
 }
