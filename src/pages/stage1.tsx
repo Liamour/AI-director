@@ -473,15 +473,16 @@ interface EpisodeCardProps {
 
 function EpisodeCard({ episode, active, onClick, onDelete }: EpisodeCardProps) {
   const wc = countWords(episode.content);
-  // Match te-input border treatment so the sidebar and editor read as the
-  // same visual language (hard 1px border, no shadow).
+  // Tactile button treatment — same family as DeviceCard on landing page:
+  // raised polymer panel with shadow-te-key, depresses on active.
   return (
     <div
-      className={`relative group rounded cursor-pointer transition-colors border
+      className={`relative group rounded-md cursor-pointer
+        transition-[transform,box-shadow,background] duration-100
         ${
           active
-            ? 'bg-te-charcoal text-te-bone border-te-charcoal'
-            : 'bg-[#FDFCF7] text-te-charcoal border-te-charcoal hover:bg-te-bone-dim'
+            ? 'bg-te-charcoal text-te-bone shadow-te-key-active translate-y-[1px]'
+            : 'bg-te-bone-dim text-te-charcoal shadow-te-key hover:bg-te-bone-deep active:translate-y-[1px] active:shadow-te-key-active'
         }`}
       onClick={onClick}
     >
